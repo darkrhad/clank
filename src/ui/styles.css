@@ -66,7 +66,8 @@ main { display: grid; grid-template-columns: minmax(0, 760px) minmax(320px, 1fr)
 .target.blocked line { stroke: rgba(255, 107, 91, .5); }
 .target.blocked circle { fill: rgba(255, 107, 91, .15); stroke: rgba(255, 107, 91, .7); stroke-dasharray: 4 4; }
 .target.blocked text { fill: #ffb3a8; }
-.target.teleport circle { fill: rgba(80, 160, 255, .25); stroke: #6cb4ff; stroke-dasharray: 3 3; }
+.target.teleport circle { fill: none; stroke: #6cb4ff; stroke-width: 7; stroke-dasharray: 5 3; pointer-events: stroke; }
+.target.teleport:hover circle { stroke: #a8d4ff; }
 .token circle { stroke: #000; stroke-width: 2; }
 .token text { font: bold 10px system-ui; text-anchor: middle; fill: #000; pointer-events: none; }
 .token.artifact circle { fill: #ffc94d; }
@@ -74,6 +75,9 @@ main { display: grid; grid-template-columns: minmax(0, 760px) minmax(320px, 1fr)
 .token.minor circle { fill: #7e57c2; }
 .token.minor text { fill: #fff; }
 .token.idol circle { fill: #ff8a65; }
+.cube { stroke: #fff; stroke-width: 2; filter: drop-shadow(1px 2px 1px rgba(0,0,0,.8)); }
+.dragon-marker circle { fill: #111; stroke: var(--accent); stroke-width: 3; }
+.dragon-marker text { font-size: 18px; text-anchor: middle; pointer-events: none; }
 .pawn circle { stroke: #000; stroke-width: 3; }
 .pawn.active circle { stroke: #fff; stroke-width: 4; }
 

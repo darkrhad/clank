@@ -1,6 +1,8 @@
 import { currentPlayer, moveOptions, teleportOptions, type MoveOption } from '../engine/engine';
 import { ROOMS, TUNNELS } from '../engine/map';
+import { RAGE_TRACK } from '../engine/setup';
 import type { GameState, Token } from '../engine/types';
+import { CLANK_AREA, COUNTDOWN_SPACES, HEALTH_SPACES, RAGE_SPACES } from './boardLayout';
 
 const PAWN_COLOR = { red: '#e53935', yellow: '#fdd835', green: '#43a047', blue: '#1e88e5' };
 
@@ -36,6 +38,17 @@ export function Board({ state, showTunnels, onMove, onTeleport }: Props) {
           return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="tunnel-line" />;
         })}
 
+        {/* Teleport rings go under the move targets: the ring teleports, the middle walks */}
+        {teleports.map((room) => {
+          const r = ROOMS[room];
+          return (
+            <g key={`tp-${room}`} className="target teleport" onClick={() => onTeleport(room)}>
+              <circle cx={r.x} cy={r.y} r={27} />
+              <title>Teleport here (click the blue ring)</title>
+            </g>
+          );
+        })}
+
         {/* Where the current player can go */}
         {options.map((o) => {
           const r = ROOMS[o.to];
@@ -48,16 +61,6 @@ export function Board({ state, showTunnels, onMove, onTeleport }: Props) {
             </g>
           );
         })}
-        {teleports.map((room) => {
-          const r = ROOMS[room];
-          return (
-            <g key={`tp-${room}`} className="target teleport" onClick={() => onTeleport(room)}>
-              <circle cx={r.x} cy={r.y} r={27} />
-              <title>Teleport here</title>
-            </g>
-          );
-        })}
-
         {/* Tokens still on the board */}
         {Object.entries(state.roomTokens).map(([room, tokens]) =>
           tokens.map((t, i) => {
@@ -73,15 +76,45 @@ export function Board({ state, showTunnels, onMove, onTeleport }: Props) {
           }),
         )}
 
-        {/* Pawns */}
+        {/* Health meters: damage cubes from the heart towards the skull */}
+        {state.players.map((p) =>
+          HEALTH_SPACES[p.color].slice(0, p.damage).map((pos, i) => (
+            <rect key={`hp-${p.id}-${i}`} className="cube" x={pos.x - 9} y={pos.y - 9} width={18} height={18} rx={3} fill={PAWN_COLOR[p.color]}>
+              <title>{p.name}: {p.damage} damage</title>
+            </rect>
+          )),
+        )}
+
+        {/* Clank! area: everyone's cubes, until the next dragon attack */}
+        {state.players
+          .flatMap((p) => Array.from({ length: state.clankArea[p.id] }, () => p))
+          .map((p, i) => (
+            <rect key={`clank-${i}`} className="cube"
+              x={CLANK_AREA.x + (i % CLANK_AREA.columns) * CLANK_AREA.step}
+              y={CLANK_AREA.y + Math.floor(i / CLANK_AREA.columns) * CLANK_AREA.step}
+              width={CLANK_AREA.cube} height={CLANK_AREA.cube} rx={1} fill={PAWN_COLOR[p.color]}>
+              <title>{p.name}: {state.clankArea[p.id]} Clank! in the Clank! area</title>
+            </rect>
+          ))}
+
+        {/* Dragon marker on the rage track */}
+        <g className="dragon-marker">
+          <circle cx={RAGE_SPACES[state.rage].x} cy={RAGE_SPACES[state.rage].y} r={17} />
+          <text x={RAGE_SPACES[state.rage].x} y={RAGE_SPACES[state.rage].y + 7}>🐉</text>
+          <title>Dragon rage: draws {RAGE_TRACK[state.rage]} cubes per attack</title>
+        </g>
+
+        {/* Pawns: in the dungeon, outside (escaped), or on the countdown track */}
         {state.players.map((p, i) => {
-          const r = ROOMS[p.room];
-          if (p.status === 'dead') return null;
-          const x = r.x - 12 + (i % 2) * 24, y = r.y - 8 + Math.floor(i / 2) * 16;
+          let pos: { x: number; y: number } | null = null;
+          if (state.countdown?.playerId === p.id) pos = COUNTDOWN_SPACES[Math.min(state.countdown.space, 5) - 1];
+          else if (p.status === 'playing' || p.status === 'escaped') pos = ROOMS[p.room];
+          if (!pos) return null;
+          const x = pos.x - 12 + (i % 2) * 24, y = pos.y - 8 + Math.floor(i / 2) * 16;
           return (
             <g key={p.id} className={`pawn${p === me ? ' active' : ''}`}>
               <circle cx={x} cy={y} r={10} fill={PAWN_COLOR[p.color]} />
-              <title>{p.name}</title>
+              <title>{p.name}{state.countdown?.playerId === p.id ? ` (countdown space ${state.countdown.space})` : ''}</title>
             </g>
           );
         })}
