@@ -31,6 +31,15 @@ export interface Tunnel {
   wrap?: boolean;
 }
 
+const ROOM_LABEL: Record<RoomType, string> = {
+  entrance: 'outside the dungeon', room: 'a room', cave: 'a Crystal Cave', market: 'the Market',
+  fountain: 'a Fountain of Healing', shrine: 'the Monkey Shrine',
+};
+
+// "a Crystal Cave in the Depths", for the log and the screens
+export const roomLabel = (id: RoomId): string =>
+  `${ROOM_LABEL[ROOMS[id].type]}${ROOMS[id].depths ? ' in the Depths' : ''}`;
+
 export const ROOMS: Record<RoomId, Room> = {
   entrance: { x: 50, y: 58, type: 'entrance', name: 'Outside the dungeon' },
 

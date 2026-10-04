@@ -143,3 +143,15 @@ main { display: grid; grid-template-columns: minmax(0, 760px) minmax(320px, 1fr)
 .modal table { border-collapse: collapse; width: 100%; }
 .modal th, .modal td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .modal tr td:first-child { border-left: 4px solid var(--pc); }
+
+/* AI players */
+.seat { display: grid; grid-template-columns: 150px 1fr; gap: 8px; }
+.seat select { border-left: 6px solid var(--pc); }
+select { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; }
+.levels { margin: 0; padding-left: 18px; }
+.levels li { margin: 2px 0; }
+.bot-badge { background: #3a2f5c; border-radius: 6px; padding: 0 6px; }
+.bot-controls { display: flex; gap: 6px; }
+.board.watching .target { pointer-events: none; }
+.thinking { color: var(--accent); animation: blink 1.2s infinite; }
+@keyframes blink { 50% { opacity: .35; } }

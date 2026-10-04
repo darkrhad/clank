@@ -18,19 +18,20 @@ function tokenBadge(t: Token): { label: string; cls: string } {
 
 interface Props {
   state: GameState;
+  interactive: boolean; // false during AI turns: show the options, no clicking
   showTunnels: boolean;
   onMove: (option: MoveOption) => void;
   onTeleport: (room: string) => void;
 }
 
-export function Board({ state, showTunnels, onMove, onTeleport }: Props) {
+export function Board({ state, interactive, showTunnels, onMove, onTeleport }: Props) {
   const me = currentPlayer(state);
   const options = state.over ? [] : moveOptions(state);
   const teleports = state.over ? [] : teleportOptions(state);
   const here = ROOMS[me.room];
 
   return (
-    <div className="board">
+    <div className={`board${interactive ? '' : ' watching'}`}>
       <img src="/board.png" alt="Clank! board" />
       <svg viewBox="0 0 907 905">
         {showTunnels && TUNNELS.filter((t) => !t.wrap).map((t, i) => {

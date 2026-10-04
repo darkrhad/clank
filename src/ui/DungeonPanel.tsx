@@ -8,12 +8,13 @@ import { Card } from './Card';
 interface Props {
   state: GameState;
   dispatch: (move: Move) => void;
+  readOnly?: boolean; // an AI is playing: show, but no buttons to press
 }
 
-export function DungeonPanel({ state, dispatch }: Props) {
+export function DungeonPanel({ state, dispatch, readOnly }: Props) {
   const left = available(state);
   const inCave = ROOMS[currentPlayer(state).room].type === 'cave';
-  const busy = !!state.pending || state.over;
+  const busy = !!state.pending || state.over || !!readOnly;
 
   return (
     <section className="panel dungeon-panel">

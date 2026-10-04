@@ -3,7 +3,7 @@
 
 import { produce } from 'immer';
 import { CARDS, cardDef, type Effect } from './cards';
-import { ROOMS, TUNNELS, type Tunnel } from './map';
+import { roomLabel, ROOMS, TUNNELS, type Tunnel } from './map';
 import { random, shuffle } from './rng';
 import { SECRETS } from './secrets';
 import { drawCards, HAND_SIZE, MARKET_PRICE, MAX_HEALTH, newTurn, RAGE_TRACK } from './setup';
@@ -461,6 +461,7 @@ function step(s: GameState, move: Move) {
       s.turn.spent.boots += option.boots;
       s.turn.spent.swords += swords;
       const damage = option.monsters - swords;
+      if (move.to !== 'entrance') log(s, `${p.name} moves into ${roomLabel(move.to)}.`);
       if (damage) {
         p.supply -= damage;
         takeDamage(s, p, damage);

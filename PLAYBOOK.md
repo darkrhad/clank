@@ -17,7 +17,8 @@ exercises at the end let you change the game yourself.
 9. [Testing a game](#9-testing-a-game)
 10. [From rulebook to code: the process](#10-from-rulebook-to-code-the-process)
 11. [Exercises](#11-exercises)
-12. [Glossary](#12-glossary)
+12. [The AI players](#12-the-ai-players)
+13. [Glossary](#13-glossary)
 
 ---
 
@@ -473,16 +474,18 @@ Read `enterRoom` first: does the log say "heals 1" when there is nothing to heal
 
 **What you learn:** tests are also a way to ask "what does the code actually do?".
 
-### Exercise 6: a smarter bot ⭐⭐⭐
+### Exercise 6: improve the AI, and prove it ⭐⭐⭐
 
-In `simulation.test.ts`, `botMove` picks random moves. Make it prefer:
-1. moving toward the nearest Artifact,
-2. once it has one, moving toward the entrance.
+Read chapter 12 first. Then pick one idea and measure it with the tournament in `src/ai/bot.test.ts`:
 
-Hint: to find "nearest", search outward room by room over `TUNNELS` (a breadth-first search).
-Count how often bots escape before and after.
+- **Backpack:** let Hard buy a Backpack and grab a second Artifact when it's cheap to reach.
+- **Tuning:** in `chooseTarget`, Hard's score uses `hurry = 6` once the countdown runs. Try 3 and 10.
+- **Easy, but fairer:** Easy only wins 1 game in 60 against Medium. Make it a little better
+  (e.g. let it use Swords in monster tunnels) and see how the numbers move.
 
-**What you learn:** the engine doesn't care who sends moves: a person, a bot or (later) the network.
+Run `npx vitest run src/ai` and compare the `medium vs easy` / `hard vs medium` lines it prints.
+
+**What you learn:** "is the AI better?" is a question you answer with numbers, not a feeling.
 
 ### Exercise 7: think about online play ⭐⭐⭐ (no code)
 
@@ -495,7 +498,91 @@ The demo is "pass the screen". For online play, answer these:
 
 ---
 
-## 12. Glossary
+## 12. The AI players
+
+📄 `src/ai/bot.ts`, `src/ai/planning.ts`, `src/ai/bot.test.ts`
+
+### The idea
+
+An AI is just another way to send moves. `chooseMove(state, level)` looks at the state and returns
+**one** move. The screen applies it, waits a moment so you can follow, and asks again, until the
+AI ends its turn. The AI never touches the state directly, so **it plays by exactly the same
+rules as you**: an illegal move from a bot is refused like yours.
+
+```
+AI turn:  chooseMove → applyMove → (pause) → chooseMove → applyMove → … → endTurn
+```
+
+### One move at a time, in a fixed order of questions
+
+```ts
+if (s.pending)      → answer the choice (discard a Stumble, trash a Stumble)
+if (hand not empty) → play all cards
+pickToken           → anything worth taking in this room?
+pickPotion          → drink a potion if it helps now
+pickMarket          → buy a Crown (or a Key that shortens the way)
+pickStep            → walk one tunnel toward the goal
+pickPurchase        → spend leftover Skill and Swords
+otherwise           → end the turn
+```
+
+The first question with an answer wins. Asking again after every move means the AI always
+reacts to the **current** situation, e.g. a card drawn mid-turn or a token it just found.
+
+### Planning a route
+
+`distancesTo(goal)` in `planning.ts` computes, for every room, how expensive it is to reach the
+goal. It's Dijkstra's shortest-path algorithm over the `TUNNELS` table, where a tunnel costs:
+
+```
+Boots  +  monster damage × damageWeight  +  (Crystal Cave? cavePenalty)
+```
+
+- `damageWeight` is the personality: Easy ignores damage (0.2), Medium avoids it (1.5), and Hard
+  avoids it more the more hurt it is (1 + damage/3).
+- Each turn, `pickStep` takes the tunnel that brings it closest to the goal, and only one that really
+  gets closer. That's why bots never walk back and forth.
+
+### Choosing the goal: where the levels differ
+
+| Level | Without an Artifact, goes for… |
+|---|---|
+| Easy | the **nearest** Artifact, whatever its value (and takes a wrong turn 25% of the time) |
+| Medium | the best **value − 2.5 × distance** |
+| Hard | the best **expected score**: value + 20 × chance to escape − time, using `bootsPerTurn` (how fast its deck is) and `dragonRiskPerTurn` (its share of the cubes in the bag × cubes drawn) |
+
+With an Artifact, everyone heads for the exit. Medium and Hard also detour to a nearby fountain
+when badly hurt.
+
+### Buying: a value for every card
+
+`cardValue` gives each card a number: Boots, Skill, Swords, card draw and Gold are worth something,
+making Clank! costs something, and points count for more late in the game (for Hard). The AI buys
+the most valuable card it can afford, as long as it's worth at least 1. Easy just buys something
+random 60% of the time.
+
+### How we know the levels differ
+
+`bot.test.ts` makes bots play hundreds of games:
+
+- every level, 20 full games: **no illegal moves, no stuck games**
+- **Medium vs Easy:** 59 to 1
+- **Hard vs Medium:** 58 to 22 (72%)
+
+The seats are swapped every game, so going first doesn't skew the result. In 60 games against
+itself, Easy escapes 59% of the time and dies 17%; Medium and Hard escape 91–95% and never die.
+
+### What it doesn't do (yet)
+
+- No look-ahead: it doesn't try out several plans on a copy of the state. With immutable states
+  this is easy to add (`applyMove` on a copy costs nothing) and is the natural next step for a
+  stronger Hard.
+- It doesn't watch opponents, e.g. "Yellow is about to escape, hurry".
+- No Backpack or second Artifact (exercise 6).
+
+---
+
+## 13. Glossary
 
 | Term | Meaning |
 |---|---|
@@ -509,3 +596,5 @@ The demo is "pass the screen". For online play, answer these:
 | **Seed / seeded RNG** | A number that makes "random" results repeatable. |
 | **Invariant** | Something that must always be true, checked after every move in the bot games. |
 | **Dispatch** | The UI function that sends a move to the engine. |
+| **Dijkstra** | A shortest-path algorithm: from the goal outwards, always extend the cheapest route first. |
+| **Heuristic** | A rule of thumb that scores options ("value − 2.5 × distance") instead of computing the perfect move. |
