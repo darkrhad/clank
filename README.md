@@ -35,13 +35,10 @@ In bot tournaments (`npx vitest run src/ai`), Medium beats Easy 59 to 1, Hard be
 - `engine/setup.ts`: a new game; `engine/engine.ts`: the rules; `engine/scoring.ts`: the end
 - `engine/rng.ts`: seeded random numbers, so a game can be replayed exactly
 - `engine/*.test.ts`: one test per rule, plus bots playing complete games
+- `assets/deck1-5.jpeg`: photos of the 100 Dungeon cards that `cards.ts` was read from (local only, not in the repo)
 
 ## Differences from the real game
 
-- **Dungeon deck:** 35 cards, built only from cards shown or quoted in the rulebook
-  (the real deck has 100). Values the rulebook doesn't show are marked `assumed`
-  in `cards.ts` and on the cards.
 - **Secret token mix:** the totals are from the rulebook (11 major, 18 minor), the mix is assumed.
-- **House rule:** when the Dungeon Deck runs out, the Dungeon discard pile is
-  reshuffled into a new deck (needed because the deck is small).
+- **Starting deck:** Sidestep and Scramble values are assumed.
 - Only the front side of the board.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyMove, RuleError } from '../engine/engine';
+import { applyMove, RuleError, skipMove } from '../engine/engine';
 import { finalScores } from '../engine/scoring';
 import { createGame } from '../engine/setup';
 import type { GameState } from '../engine/types';
@@ -25,7 +25,7 @@ export function playBots(levels: Level[], seed: number) {
     } catch (e) {
       if (!(e instanceof RuleError)) throw e;
       illegal++;
-      s = applyMove(s, s.pending ? { type: 'choose', uid: null } : { type: 'endTurn' });
+      s = applyMove(s, skipMove(s));
     }
   }
   const { winner } = finalScores(s);

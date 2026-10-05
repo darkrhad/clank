@@ -93,33 +93,121 @@ main { display: grid; grid-template-columns: minmax(0, 760px) minmax(320px, 1fr)
 .handoff { border-top: 4px solid var(--pc); text-align: center; padding: 30px 12px; }
 .handoff p { color: var(--muted); }
 
-/* Cards */
+/* Cards: laid out like the physical cards */
 .cards { display: flex; flex-wrap: wrap; gap: 8px; }
 .cards.row { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
 .card {
-  --banner: #78909c;
-  width: 128px; min-height: 150px; flex: none; display: flex; flex-direction: column; gap: 4px;
-  background: #efe3c8; color: #2b2217; border-radius: 8px; overflow: hidden; border: 2px solid #1b1510;
-  box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  --banner: #6f86c6; --banner-dark: #46599a;
+  width: 150px; flex: none; display: flex; flex-direction: column;
+  background: #3a3d42; color: #2b2217; border-radius: 9px; border: 2px solid #1d1f22; padding: 3px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.45); font-family: Georgia, 'Times New Roman', serif;
 }
-.card.small { width: 112px; min-height: 104px; }
+.card.small { width: 116px; }
 .card.clickable { cursor: pointer; }
 .card.clickable:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,.5); }
 .card.disabled { opacity: .6; }
-.card.empty { background: transparent; border: 2px dashed var(--line); color: var(--muted); align-items: center; justify-content: center; box-shadow: none; }
-.banner-starter { --banner: #78909c; } .banner-reserve { --banner: #c9a227; } .banner-dungeon { --banner: #3f7fc0; }
-.banner-device { --banner: #7e57c2; } .banner-monster { --banner: #c0392b; }
-.card-banner { background: var(--banner); color: #fff; font-weight: 700; padding: 4px 6px; display: flex; justify-content: space-between; gap: 4px; font-size: 12px; }
-.card-points { background: #2e7d32; border-radius: 50%; min-width: 18px; text-align: center; }
-.card-type { font-size: 10px; color: #6b5a42; padding: 0 6px; text-transform: uppercase; letter-spacing: .04em; }
-.card-icons { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 6px; font-weight: 700; font-size: 13px; }
-.card-icons span { background: rgba(0,0,0,.08); border-radius: 4px; padding: 1px 5px; }
-.card-text { font-size: 11px; padding: 0 6px; color: #4a3b28; }
-.card-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding: 0 6px 4px; }
-.card-cost { background: #1565c0; color: #fff; border-radius: 4px; padding: 0 5px; font-size: 12px; margin-left: auto; }
-.card-cost.swords { background: #b71c1c; }
-.card-assumed { font-size: 9px; color: #a1887f; font-style: italic; }
-.card button { margin: 0 6px 6px; padding: 4px; font-size: 12px; background: #3b2f22; }
+.card.empty { background: transparent; border: 2px dashed var(--line); color: var(--muted); align-items: center; justify-content: center; box-shadow: none; min-height: 200px; }
+.t-starter { --banner: #8193a6; --banner-dark: #5b6b7c; }
+.t-reserve { --banner: #b58b2a; --banner-dark: #86651c; }
+.t-tome { --banner: #d4b03c; --banner-dark: #9d7f22; }
+.t-dungeon { --banner: #6f86c6; --banner-dark: #46599a; }
+.t-device { --banner: #8a62b5; --banner-dark: #5d3f80; }
+.t-monster { --banner: #c43d33; --banner-dark: #8a241d; }
+
+.c-face { position: relative; display: flex; flex-direction: column; flex: 1; border-radius: 6px; overflow: hidden; background: #e9dbb4; }
+.c-banner {
+  display: flex; align-items: center; gap: 4px; padding: 4px 5px; min-height: 26px;
+  background: linear-gradient(var(--banner), var(--banner-dark)); color: #fff;
+  border-bottom: 2px solid rgba(0,0,0,.35);
+}
+.c-name { flex: 1; text-align: center; font-weight: 700; font-size: 12px; line-height: 1.1; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+.c-sub { text-align: center; margin-top: -1px; background: #3a3d42; line-height: 1; }
+.c-sub span { display: inline-block; background: #1f2023; color: #f3ead6; font-size: 9.5px; font-weight: 700; padding: 2px 8px 3px; }
+.c-art {
+  position: relative; min-height: 64px; padding: 4px;
+  background: radial-gradient(ellipse at 60% 40%, #9aa3a8, #5f676c 75%);
+  border-bottom: 3px solid #8b8f93;
+}
+.small .c-art { min-height: 40px; }
+/* Artwork fills the picture area (4:3, like the printed window) */
+.c-art.has-art { aspect-ratio: 4 / 3; background-size: cover; background-position: center; }
+.small .c-art.has-art { min-height: 0; }
+.c-left { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.c-badges { position: absolute; right: 4px; bottom: 4px; display: flex; flex-direction: column; gap: 3px; align-items: center; }
+.badge-dragon {
+  width: 32px; height: 32px; display: grid; place-items: center; font-size: 21px; border-radius: 50%;
+  background: radial-gradient(circle, #ffe08a 15%, #f58a22 55%, #b8320d); box-shadow: 0 0 8px #ff9a2a;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.5));
+}
+/* The emoji dragon is green; the printed one is dark purple */
+.badge-dragon i { font-style: normal; filter: hue-rotate(150deg) brightness(.55) saturate(1.6); }
+.badge-arrive {
+  width: 20px; height: 22px; display: grid; place-items: center; font: 900 15px system-ui; color: #f4f4f4;
+  background: linear-gradient(#7c8288, #4b5055); border: 2px solid #c9cdd1; border-radius: 3px;
+}
+.badge-danger {
+  position: absolute; left: 4px; bottom: 4px; width: 22px; height: 24px; display: grid; place-items: center;
+  font: 900 16px system-ui; color: #fff; background: #d04a1c;
+  clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);
+}
+.c-strip { background: #2a2420; color: #f3ead6; font-size: 9.5px; line-height: 1.25; padding: 3px 5px; border-top: 2px solid #c99a3b; }
+.c-strip b { color: #f0b653; letter-spacing: .03em; }
+.c-text {
+  flex: 1; min-height: 58px; padding: 5px 8px 18px; font-size: 10.5px; line-height: 1.3; text-align: center; color: #3b2a1a;
+  background: linear-gradient(#ecdfba, #ddcb9b);
+}
+.c-text p { margin: 0 0 3px; }
+.c-big { margin: 2px 0 4px; }
+.c-big .sym-gold { width: 22px; height: 22px; font-size: 13px; }
+.c-text b, .c-use { font-weight: 700; letter-spacing: .02em; }
+.c-use { border-bottom: 1px solid #8a7550; margin: 0 10px 3px; padding-bottom: 1px; }
+.c-choices { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.c-or { font-weight: 700; font-size: 9.5px; }
+.c-acquire { background: #232a33; color: #f3ead6; font-size: 9.5px; padding: 3px 34px 3px 6px; border-top: 2px solid #9fb4c8; }
+.c-acquire b { letter-spacing: .04em; margin-right: 4px; }
+.c-cost {
+  position: absolute; right: 0; bottom: 0; width: 34px; height: 30px;
+  background: linear-gradient(135deg, #a9cdef, #4f82c2 60%, #2f5c99);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+.c-cost b { position: absolute; right: 4px; bottom: 1px; color: #fff; font: 800 15px system-ui; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+.c-cost.discounted { background: linear-gradient(135deg, #b9f0c0, #3f9a54 60%, #276b37); }
+.c-swords { position: absolute; right: 3px; bottom: 3px; display: flex; gap: 1px; }
+.c-swords .sym-sword { width: 17px; height: 17px; }
+.c-assumed { position: absolute; left: 5px; bottom: 2px; font-size: 8.5px; color: #8d7a5c; font-style: italic; }
+.card button { margin: 4px 0 1px; padding: 4px; font-size: 12px; background: #2a2723; font-family: system-ui, sans-serif; }
+
+/* Card symbols (also used inline in card text) */
+.sym { display: inline-grid; place-items: center; vertical-align: middle; position: relative; font-family: system-ui, sans-serif; }
+.sym svg { width: 70%; height: 70%; }
+.sym i { position: absolute; right: -8px; top: 50%; transform: translateY(-50%); font: 900 12px system-ui; font-style: normal; color: #fff; text-shadow: 0 0 2px #000, 0 0 2px #000; }
+.sym-skill { width: 18px; height: 18px; margin: 3px; }
+.sym-skill::before {
+  content: ''; position: absolute; inset: 0; transform: rotate(45deg); border-radius: 2px;
+  background: linear-gradient(135deg, #c6ecfb, #7fc6e8); border: 1.5px solid #234a63; box-shadow: 0 0 0 1.5px #e9f6fc;
+}
+.sym-skill b { position: relative; font-size: 12px; font-weight: 800; color: #1c3a4f; }
+.c-left .sym-skill { width: 22px; height: 22px; margin: 4px; }
+.c-left .sym-skill b { font-size: 14px; }
+.c-text .sym-skill { width: 13px; height: 13px; margin: 0 3px; }
+.c-text .sym-skill b { font-size: 9px; }
+.sym-sword { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #ff8a65, #d23a1f 70%); border: 1.5px solid #5d140b; }
+.sym-sword svg { fill: #3b0d06; }
+.sym-boot { width: 22px; height: 22px; border-radius: 4px; background: linear-gradient(#ffd977, #f2a531); border: 1.5px solid #6b4405; }
+.sym-boot svg { fill: #3b2504; }
+.c-text .sym-sword, .c-text .sym-boot, .c-acquire .sym-sword, .c-acquire .sym-boot { width: 15px; height: 15px; }
+.sym-gold { width: 17px; height: 17px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff6c9, #efd77a 70%); border: 1.5px solid #9a7b22; font-size: 10px; font-weight: 800; color: #3b2a0a; }
+.sym-heart { width: 16px; height: 16px; }
+.sym-heart svg { width: 100%; height: 100%; fill: #d42a2a; stroke: #5a0d0d; stroke-width: 1; }
+.sym-points {
+  width: 22px; height: 20px; font-size: 11.5px; font-weight: 800; color: #fff; flex: none;
+  background: #6aa84f; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  text-shadow: 0 1px 1px rgba(0,0,0,.5);
+}
+.c-text .sym-points { width: 17px; height: 15px; font-size: 9.5px; }
+.sym-companion { width: 17px; height: 17px; flex: none; }
+.sym-companion svg { width: 100%; height: 100%; fill: #26282b; stroke: #fff; stroke-width: 1.5; }
+.sym-companion .fill { fill: #fff; stroke: none; }
 
 /* Dungeon panel */
 .dungeon-panel { margin-top: 12px; }

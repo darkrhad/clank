@@ -12,8 +12,11 @@
 //            (value + 20 x chance to escape − time), values points late in
 //            the game and leaves the dungeon early to start the countdown
 
-import { cardDef, CARDS, type CardDef } from '../engine/cards';
-import { available, currentPlayer, hasArtifact, hasToken, moveOptions, type MoveOption } from '../engine/engine';
+import { cardDef, CARDS, type CardDef, type Choice, type Effect } from '../engine/cards';
+import {
+  available, cardCost, choiceProblem, currentPlayer, hasArtifact, hasToken, isExhausted, moveOptions, placeProblem, trashOptions,
+  type MoveOption,
+} from '../engine/engine';
 import { ROOMS } from '../engine/map';
 import { SECRETS } from '../engine/secrets';
 import { MARKET_PRICE, MAX_HEALTH } from '../engine/setup';
@@ -103,15 +106,61 @@ function chooseTarget(s: GameState, level: Level): Target | null {
 
 function choosePending(s: GameState, level: Level): Move {
   const me = currentPlayer(s);
+  const pending = s.pending!;
+  const isBad = (c: string) => c.startsWith('stumble') || c.startsWith('burgle');
   const worst = (cards: string[]) =>
     cards.find((c) => c.startsWith('stumble')) ?? cards.find((c) => c.startsWith('burgle')) ?? cards[0] ?? null;
-  if (s.pending!.kind === 'discardToDraw') {
-    // Discarding a Stumble to draw two is always good; Easy never bothers
-    if (level === 'easy') return { type: 'choose', uid: null };
-    const stumble = me.hand.find((c) => c.startsWith('stumble'));
-    return { type: 'choose', uid: stumble ?? (level === 'hard' ? worst(me.hand) : null) };
+  switch (pending.kind) {
+    case 'discardToDraw': {
+      // Discarding a Stumble to draw two is always good; Easy never bothers
+      if (level === 'easy') return { type: 'choose', uid: null };
+      const stumble = me.hand.find((c) => c.startsWith('stumble'));
+      return { type: 'choose', uid: stumble ?? (level === 'hard' ? worst(me.hand) : null) };
+    }
+    case 'discardToChoose':
+      return { type: 'choose', uid: worst(me.hand) };
+    case 'trash': {
+      const options = trashOptions(s);
+      // Magic Spring must trash something; otherwise only get rid of starting cards
+      if (pending.reason === 'spring') return { type: 'choose', uid: worst(options) };
+      return { type: 'choose', uid: level === 'easy' ? null : worst(options.filter(isBad)) };
+    }
+    case 'option': {
+      const choices = cardDef(pending.card).choices!;
+      const allowed = choices.map((c, index) => ({ c, index })).filter(({ c }) => !choiceProblem(s, c));
+      if (level === 'easy') return { type: 'chooseOption', index: allowed[0].index };
+      const best = allowed.sort((a, b) => choiceValue(s, b.c) - choiceValue(s, a.c))[0];
+      return { type: 'chooseOption', index: best.index };
+    }
+    case 'replaceRow':
+      return { type: 'chooseOption', index: null };
+    case 'adjacentSecret':
+      return { type: 'chooseOption', index: 0 };
   }
-  return { type: 'choose', uid: worst([...me.playArea, ...me.discard]) };
+}
+
+// How good one option of a "this -OR- that" card is right now
+function choiceValue(s: GameState, c: Choice): number {
+  const me = currentPlayer(s);
+  const hasJunk = [...me.playArea, ...me.discard].some((x) => x.startsWith('stumble') || x.startsWith('burgle'));
+  return effectValue(c, me) +
+    (c.trash ? (hasJunk ? 3 : 0) : 0) +
+    (c.buyTomes ? c.buyTomes * 6 : 0) +
+    (c.adjacentSecret ? 2 : 0) +
+    (c.attack ? -5 : 0);
+}
+
+// A rough value of an effect you get once (not a card in your deck)
+function effectValue(e: Effect, me: Player): number {
+  return (e.gold ?? 0) * 0.9 +
+    (e.skill ?? 0) +
+    (e.swords ?? 0) * 0.6 +
+    (e.boots ?? 0) +
+    (e.draw ?? 0) * 2 +
+    (e.teleport ?? 0) +
+    (e.heal ? (me.damage ? 2.5 : 0) : 0) -
+    (e.clank ?? 0) * 1.2 +
+    (e.othersClank ?? 0) * 0.5;
 }
 
 function pickToken(s: GameState, level: Level): Move | null {
@@ -146,7 +195,7 @@ function pickPotion(s: GameState, level: Level): Move | null {
 
 // Would one more Boot / two more Swords let the bot take its next step?
 function stuckFor(s: GameState, level: Level, what: 'boots' | 'swords'): boolean {
-  if (s.turn.exhausted) return false;
+  if (isExhausted(s)) return false;
   const target = chooseTarget(s, level);
   if (!target) return false;
   const me = currentPlayer(s);
@@ -229,26 +278,47 @@ function cardValue(d: CardDef, s: GameState, level: Level): number {
   if (d.ifCrown) v += hasToken(me, 'crown') ? 2 : 0.5;
   if (d.skillPerClank) v += 1;
   if (d.discardToDraw) v += 1.2;
+  if (d.ifIdol) v += hasToken(me, 'idol') ? 3 : 0.5;
+  if (d.ifArtifact?.teleport) v += 0.5;
+  if (d.choices) v += 1.5;
+  if (d.goldBonus) v += 1.5;
+  if (d.gemDiscount) v += 0.5;
+  if (d.trashBurgle) v += 1.5;
+  if (d.noCaveStop) v += 0.5;
+  if (d.ignoreTunnelMonsters) v += 1;
+  v += (d.teleport ?? 0) * 1.5 + (d.othersClank ? 0.5 : 0);
+  if (d.acquire) v += effectValue(d.acquire, me) * 0.5;
+  if (d.bonus) {
+    const tomes = [...me.deck, ...me.hand, ...me.discard, ...me.playArea].filter((c) => c.startsWith('secretTome')).length;
+    const expected = { fiveGold: (me.gold + 5) / 5, secretTome: tomes + 0.5, twoTreasures: 0.3, mastery: hasArtifact(me) ? 0.8 : 0.4 }[d.bonus.per];
+    v += d.bonus.points * expected * (level === 'hard' && late ? 1.4 : 0.6);
+  }
   return v;
 }
 
 function pickPurchase(s: GameState, level: Level, rnd: Random): Move | null {
   const me = currentPlayer(s);
   const left = available(s);
-  const inCave = ROOMS[me.room].type === 'cave';
-  const wantsToMove = !s.turn.exhausted && !!chooseTarget(s, level);
+  const wantsToMove = !isExhausted(s) && !!chooseTarget(s, level);
   const options: { move: Move; value: number }[] = [];
 
   s.dungeonRow.forEach((uid, slot) => {
     if (!uid) return;
     const d = cardDef(uid);
+    if (placeProblem(s, d)) return;
     if (d.banner === 'monster') {
-      if (left.swords >= (d.defeatSwords ?? 0) && (!d.onlyInCrystalCave || inCave)) {
-        options.push({ move: { type: 'fight', slot }, value: (d.defeat?.gold ?? 0) + (d.defeat?.teleport ?? 0) * 2 + 0.5 });
+      if (left.swords >= (d.defeatSwords ?? 0)) {
+        options.push({ move: { type: 'fight', slot }, value: effectValue(d.defeat ?? {}, me) + 0.5 });
       }
-    } else if (left.skill >= (d.cost ?? 0)) {
-      if (d.banner === 'device') options.push({ move: { type: 'useDevice', slot }, value: wantsToMove ? (d.use?.boots ?? 0) * 1.5 : 0 });
-      else options.push({ move: { type: 'buy', slot }, value: cardValue(d, s, level) });
+    } else if (d.banner === 'device') {
+      if (left.skill >= (d.cost ?? 0)) {
+        const use = d.use ?? {};
+        const move = wantsToMove ? (use.boots ?? 0) * 1.5 + (use.teleport ?? 0) : 0;
+        const best = d.choices ? Math.max(...d.choices.map((c) => choiceValue(s, c))) : 0;
+        options.push({ move: { type: 'useDevice', slot }, value: move + (use.gold ?? 0) * 0.9 - (use.clank ?? 0) * 0.5 + best });
+      }
+    } else if (left.skill >= cardCost(s, d)) {
+      options.push({ move: { type: 'buy', slot }, value: cardValue(d, s, level) });
     }
   });
   for (const pile of ['mercenary', 'explore', 'secretTome'] as const) {

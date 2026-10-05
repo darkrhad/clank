@@ -11,6 +11,7 @@ export const CLANK_CUBES = 30;
 export const MARKET_PRICE = 7;
 export const HAND_SIZE = 5;
 export const ROW_SIZE = 6;
+export const BLACK_CUBES = 24;
 
 const copies = (counts: Record<string, number>, prefix = ''): CardUid[] =>
   Object.entries(counts).flatMap(([id, n]) => {
@@ -32,6 +33,10 @@ export function newTurn(): Turn {
     canTakeToken: false,
     conditionalDraws: [],
     trashes: 0,
+    goldBonus: 0,
+    gemDiscount: 0,
+    noCaveStop: false,
+    ignoreMonsters: false,
   };
 }
 
@@ -127,7 +132,7 @@ export function createGame(names: string[], seed = Date.now()): GameState {
     roomTokens,
     market: { masterKey: 2, backpack: 2, crowns: [10, 9, 8] },
     clankArea,
-    bag: { black: 24 },
+    bag: { black: BLACK_CUBES },
     rage: 4 - names.length, // 4 players: first space, 3: second, 2: third
     countdown: null,
     pending: null,

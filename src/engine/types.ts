@@ -49,11 +49,21 @@ export interface Turn {
   canTakeToken: boolean; // only once per entering a room
   conditionalDraws: CardUid[]; // "if ... draw a card" cards that already drew
   trashes: number; // Magic Spring: trash a card before the turn ends
+  goldBonus: number; // Search: extra Gold each time you gain Gold
+  gemDiscount: number; // Gem Collector: Gems cost less
+  noCaveStop: boolean; // Dead Run, Flying Carpet: Crystal Caves don't stop you
+  ignoreMonsters: boolean; // Flying Carpet: no damage in tunnels
 }
 
+// A choice the current player must make before anything else.
+// 'choose' answers the ones that pick a card, 'chooseOption' the others.
 export type Pending =
   | { kind: 'discardToDraw'; draw: number } // Sleight of Hand
-  | { kind: 'trash' }; // Magic Spring, at the end of the turn
+  | { kind: 'discardToChoose'; card: CardUid } // Apothecary: discard first, then 'option'
+  | { kind: 'option'; card: CardUid } // pick one of the card's choices
+  | { kind: 'trash'; reason: 'spring' | 'burgle' | 'card' } // Magic Spring (end of turn), Master Burglar, Dragon Shrine
+  | { kind: 'replaceRow' } // Treasure Hunter: pick a Dungeon Row space, or skip
+  | { kind: 'adjacentSecret' }; // Wand of Wind: pick one of adjacentSecrets(state)
 
 export interface GameState {
   seed: number;
@@ -88,4 +98,5 @@ export type Move =
   | { type: 'buyMarket'; item: 'masterKey' | 'backpack' | 'crown' }
   | { type: 'useToken'; index: number }
   | { type: 'choose'; uid: CardUid | null }
+  | { type: 'chooseOption'; index: number | null }
   | { type: 'endTurn' };

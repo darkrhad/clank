@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cardDef } from './cards';
-import { applyMove, available, currentPlayer, moveOptions, RuleError } from './engine';
+import { applyMove, available, cardCost, choiceProblem, currentPlayer, moveOptions, placeProblem, RuleError, skipMove, trashOptions } from './engine';
 import { finalScores } from './scoring';
 import { createGame, CLANK_CUBES, MAX_HEALTH } from './setup';
 import type { GameState, Move } from './types';
@@ -9,9 +9,19 @@ import type { GameState, Move } from './types';
 // every part of the rules, so crashes, stuck games and broken totals show up.
 function botMove(s: GameState, rnd: () => number): Move {
   const me = currentPlayer(s);
-  if (s.pending) {
-    if (s.pending.kind === 'discardToDraw') return { type: 'choose', uid: me.hand[0] ?? null };
-    return { type: 'choose', uid: [...me.playArea, ...me.discard][0] ?? null };
+  const pending = s.pending;
+  if (pending) {
+    if (pending.kind === 'discardToDraw' || pending.kind === 'discardToChoose') return { type: 'choose', uid: me.hand[0] ?? null };
+    if (pending.kind === 'trash') return { type: 'choose', uid: trashOptions(s)[0] ?? null };
+    if (pending.kind === 'option') {
+      const allowed = cardDef(pending.card).choices!.map((c, i) => (choiceProblem(s, c) ? -1 : i)).filter((i) => i >= 0);
+      return { type: 'chooseOption', index: allowed[Math.floor(rnd() * allowed.length)] };
+    }
+    if (pending.kind === 'replaceRow') {
+      const slots = s.dungeonRow.map((c, i) => (c ? i : -1)).filter((i) => i >= 0);
+      return { type: 'chooseOption', index: rnd() < 0.5 ? null : slots[Math.floor(rnd() * slots.length)] ?? null };
+    }
+    return skipMove(s);
   }
   if (me.hand.length) return { type: 'playAll' };
 
@@ -20,9 +30,10 @@ function botMove(s: GameState, rnd: () => number): Move {
   s.dungeonRow.forEach((uid, slot) => {
     if (!uid) return;
     const d = cardDef(uid);
+    if (placeProblem(s, d)) return;
     if (d.banner === 'monster' && left.swords >= (d.defeatSwords ?? 0)) options.push({ type: 'fight', slot });
     else if (d.banner === 'device' && left.skill >= (d.cost ?? 0)) options.push({ type: 'useDevice', slot });
-    else if (d.banner === 'dungeon' && left.skill >= (d.cost ?? 0)) options.push({ type: 'buy', slot });
+    else if (d.banner === 'dungeon' && left.skill >= cardCost(s, d)) options.push({ type: 'buy', slot });
   });
   if (left.skill >= 2) options.push({ type: 'buyReserve', pile: 'mercenary' });
   if (left.skill >= 3) options.push({ type: 'buyReserve', pile: 'explore' });
@@ -54,7 +65,7 @@ function simulate(seed: number, players: number) {
     } catch (e) {
       if (!(e instanceof RuleError)) throw e;
       rejected++;
-      s = applyMove(s, s.pending ? { type: 'choose', uid: null } : { type: 'endTurn' });
+      s = applyMove(s, skipMove(s));
     }
     checkInvariants(s);
   }

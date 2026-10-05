@@ -123,7 +123,7 @@ Cards, the map and secret tokens are tables of data, not code. A card looks like
 ```ts
 { id: 'elvenBoots', name: 'Elven Boots', banner: 'dungeon',
   skill: 1, boots: 1, draw: 1, points: 2, cost: 4,
-  text: 'Draw a card.', source: 'rulebook' }
+  text: 'Draw a card.', source: 'photo' }
 ```
 
 The engine has **one** function, `applyEffect` (in `engine.ts`), that knows what
@@ -134,20 +134,25 @@ Only unusual effects need code, and each gets a named field that the engine look
 
 | Field | Card | Where the engine handles it |
 |---|---|---|
-| `ifCompanionDraw` | Rebel Captain, Rebel Scout | `checkConditionalDraws` |
-| `ifArtifact`, `ifCrown`, `skillPerClank` | Kobold Merchant, Mountain King, Swagger | `available` |
-| `discardToDraw` | Sleight of Hand | `playCard` sets `pending` |
-| `onlyInCrystalCave` | Crystal Golem | the `fight` move |
-| `arrive`, `danger`, `dragonAttack` | monsters | `refillRow`, `dragonAttack` |
+| `ifCompanionDraw` | Rebel Captain, Scout, Soldier, Miner | `checkConditionals` |
+| `ifArtifact`, `ifCrown`, `ifIdol`, `skillPerClank` | Kobold Merchant, Mountain King, Archaeologist, Swagger | `available` (Skill, Swords, Boots) and `checkConditionals` (teleport, heal: Wand of Recall, Queen of Hearts) |
+| `othersClank`, `returnCubes` | Tattle, Watcher, Shrine | `applyEffect` |
+| `discardToDraw`, `discardToChoose`, `choices`, `trashBurgle`, `replaceRow` | Sleight of Hand, Apothecary, Shrine, Mister Whiskers, Master Burglar, Treasure Hunter… | `playCard` / `useDevice` set `pending`; answered with `choose` or `chooseOption` |
+| `goldBonus`, `gemDiscount`, `noCaveStop`, `ignoreTunnelMonsters` | Search, Gem Collector, Dead Run, Flying Carpet | `playCard` sets a flag in `turn` |
+| `acquire` | Gems, Amulet of Vigor, Silver Spear… | the `buy` move |
+| `onlyInCrystalCave`, `deep` | Crystal Golem, Cave Troll, The Vault, Dragon's Eye | `placeProblem` |
+| `bonus` ("?" points) | The Duke, Wizard, Dwarven Peddler, Dragon's Eye | `cardPoints` in `scoring.ts` |
+| `arrive`, `danger`, `dragonAttack` | monsters, Shrine, Dragon Shrine | `reveal`, `refillRow`, `dragonAttack` |
 
 **The map works the same way.** `ROOMS` lists every room (position on the picture, type,
 starting tokens, whether it's in the Depths). `TUNNELS` lists every connection with
 its special rules (`boots: 2`, `monsters: 1`, `locked`, `oneWay`, `wrap`). The rules for
 moving are written once in `moveOptions`, and they work for any map you put in the table.
 
-**The `source` field** records where each value came from: `'rulebook'` (read from a card
-in the rulebook), `'rulebook-text'` (effect quoted, cost guessed) or `'assumed'`. When
-you get the real card list, you know exactly what to check.
+**The `source` field** records where each value came from: `'photo'` (read from a photo
+of the real card, `assets/deck1-5.jpeg`), `'rulebook'` (read from a card in the rulebook)
+or `'assumed'`. The first version had only the cards from the rulebook, many marked
+`'assumed'`; once the real cards were photographed, `source` showed exactly what to check.
 
 ---
 
@@ -242,7 +247,7 @@ always right. The UI uses the same functions:
 - `canEndTurn(s)` → whether "End turn" is enabled, and its tooltip
 
 **Rebel Captain's "draw a card" is different:** drawing is an action, not a number. Here
-`checkConditionalDraws` runs after **every** move and draws once when the condition
+`checkConditionals` runs after **every** move and draws once when the condition
 becomes true. `turn.conditionalDraws` remembers which cards already drew, so it happens
 only once.
 
@@ -403,7 +408,8 @@ This is the order the project was built in. It works for most board games.
 | 8. Play it | In a real browser, to the end | That's how the stuck-game issue was found |
 
 **The hardest part is usually step 3**, not the code: the rulebook didn't list the 100
-dungeon cards, and the map had to be read room by room from a picture.
+dungeon cards (they were read from photos of the real cards later), and the map had to be
+read room by room from a picture.
 
 ---
 
@@ -413,15 +419,16 @@ Run `npm test` after each one. Start with exercise 1.
 
 ### Exercise 1: add a card (data only) ⭐
 
-Add a dungeon card "Treasure Hunter": 2 Gold, costs 3 Skill, worth 1 point.
+Invent a dungeon card "Lantern": 2 Gold, costs 3 Skill, worth 1 point. (All 100 real
+cards are already in; this one is yours.)
 
 1. In `cards.ts`, add to `defs`:
-   `{ id: 'treasureHunter', name: 'Treasure Hunter', banner: 'dungeon', gold: 2, points: 1, cost: 3, source: 'assumed' }`
-2. Add `treasureHunter: 3` to `DUNGEON_DECK`.
+   `{ id: 'lantern', name: 'Lantern', banner: 'dungeon', gold: 2, points: 1, cost: 3, source: 'assumed' }`
+2. Add `lantern: 3` to `DUNGEON_DECK`.
 3. Add a test in `engine.test.ts`:
    ```ts
-   it('Treasure Hunter gives 2 Gold', () => {
-     expect(me(playAll(withHand(game(), ['treasureHunter']))).gold).toBe(2);
+   it('Lantern gives 2 Gold', () => {
+     expect(me(playAll(withHand(game(), ['lantern']))).gold).toBe(2);
    });
    ```
 4. Run `npm run dev` and find it in the Dungeon Row.

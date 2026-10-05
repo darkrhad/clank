@@ -23,13 +23,35 @@ const tokenPoints = (t: Token): number => {
   }
 };
 
+const allCards = (p: Player) => [...p.deck, ...p.hand, ...p.discard, ...p.playArea];
+
+// A card's points at the end of the game, including "?" points
+export function cardPoints(p: Player, uid: string): number {
+  const d = cardDef(uid);
+  const base = d.points ?? 0;
+  if (!d.bonus) return base;
+  const kept = (secret: string) => p.tokens.some((t) => t.kind === 'kept' && t.secret === secret);
+  switch (d.bonus.per) {
+    case 'fiveGold':
+      return base + d.bonus.points * Math.floor(p.gold / 5);
+    case 'secretTome':
+      return base + d.bonus.points * allCards(p).filter((c) => c.startsWith('secretTome#')).length;
+    case 'twoTreasures': {
+      const have = [kept('chalice'), kept('dragonEgg'), p.tokens.some((t) => t.kind === 'idol')].filter(Boolean).length;
+      return base + (have >= 2 ? d.bonus.points : 0);
+    }
+    case 'mastery':
+      return base + (p.tokens.some((t) => t.kind === 'mastery') ? d.bonus.points : 0);
+  }
+}
+
 export function scorePlayer(p: Player): Score {
-  const cards = [...p.deck, ...p.hand, ...p.discard, ...p.playArea];
+  const cards = allCards(p);
   const parts = [
     { label: 'Artifacts', points: p.tokens.filter((t) => t.kind === 'artifact').reduce((a, t) => a + tokenPoints(t), 0) },
     { label: 'Other tokens', points: p.tokens.filter((t) => t.kind !== 'artifact').reduce((a, t) => a + tokenPoints(t), 0) },
     { label: 'Gold', points: p.gold },
-    { label: 'Cards', points: cards.reduce((a, c) => a + (cardDef(c).points ?? 0), 0) },
+    { label: 'Cards', points: cards.reduce((a, c) => a + cardPoints(p, c), 0) },
   ];
   const bestArtifact = Math.max(0, ...p.tokens.map((t) => (t.kind === 'artifact' ? t.value : 0)));
   // Knocked out in the Depths or without an Artifact: no score

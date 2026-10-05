@@ -1,4 +1,4 @@
-import { available, canEndTurn, currentPlayer, hasArtifact } from '../engine/engine';
+import { available, canEndTurn, currentPlayer, hasArtifact, isExhausted } from '../engine/engine';
 import { ROOMS } from '../engine/map';
 import { SECRETS } from '../engine/secrets';
 import { MARKET_PRICE, MAX_HEALTH } from '../engine/setup';
@@ -40,14 +40,14 @@ export function PlayerPanel({ state, dispatch, canUndo, onUndo }: Props) {
       <header>
         <h2>{me.name}'s turn</h2>
         <span className="where">
-          {ROOM_TYPE[room.type]}{room.depths ? ' · Depths' : ''}{state.turn.exhausted ? ' · exhausted' : ''}
+          {ROOM_TYPE[room.type]}{room.depths ? ' · Depths' : ''}{isExhausted(state) ? ' · exhausted' : ''}
         </span>
       </header>
 
       <div className="resources">
         <span title="Skill: buy cards">◆ {left.skill}</span>
         <span title="Swords: fight monsters, block tunnel damage">🗡️ {left.swords}</span>
-        <span title="Boots: move through tunnels">👢 {state.turn.exhausted ? 0 : left.boots}</span>
+        <span title="Boots: move through tunnels">👢 {isExhausted(state) ? 0 : left.boots}</span>
         <span title="Gold">🪙 {me.gold}</span>
         <span title="Damage on your health meter">❤ {MAX_HEALTH - me.damage}/{MAX_HEALTH}</span>
         <span title="Your cubes in the Clank! area / in your supply">🔔 {state.clankArea[me.id]} <small>({me.supply} left)</small></span>

@@ -1,3 +1,8 @@
 node_modules
 dist
 *.log
+
+# Publisher material: kept local, never pushed (the repo is public)
+assets/
+public/Spelregels-Clank-Engels.pdf
+.DS_Store

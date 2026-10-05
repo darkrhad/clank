@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { chooseMove, LEVEL_NAME, LEVELS, type Level } from '../ai/bot';
-import { applyMove, available, currentPlayer, RuleError, type MoveOption } from '../engine/engine';
+import { applyMove, available, currentPlayer, RuleError, skipMove, type MoveOption } from '../engine/engine';
 import { ROOMS } from '../engine/map';
 import { finalScores } from '../engine/scoring';
 import { COLORS, createGame, MAX_HEALTH } from '../engine/setup';
 import type { GameState, Move } from '../engine/types';
 import { Board } from './Board';
 import { BotPanel } from './BotPanel';
-import { Card } from './Card';
 import { DungeonPanel } from './DungeonPanel';
+import { PendingDialog } from './PendingDialog';
 import { PlayerPanel, tokenName } from './PlayerPanel';
 
 const STATUS = { playing: 'in the dungeon', escaped: 'escaped', rescued: 'rescued', dead: 'knocked out' };
@@ -125,7 +125,7 @@ export default function App() {
         if (!(e instanceof RuleError)) throw e;
         // A bot should never do this; don't get stuck if it does
         console.warn(`AI (${level}) tried an illegal move: ${e.message}`);
-        setState(applyMove(state, state.pending ? { type: 'choose', uid: null } : { type: 'endTurn' }));
+        setState(applyMove(state, skipMove(state)));
       }
       setHistory([]);
     }, SPEEDS[speed]);
@@ -257,32 +257,7 @@ export default function App() {
         </div>
       )}
 
-      {state.pending && !handHidden && !botTurn && (
-        <div className="overlay">
-          <div className="modal">
-            {state.pending.kind === 'discardToDraw' ? (
-              <>
-                <h3>Discard a card to draw {state.pending.draw}</h3>
-                <p>The discarded card has no effect.</p>
-                <div className="cards">
-                  {me.hand.map((uid) => <Card key={uid} uid={uid} small onClick={() => dispatch({ type: 'choose', uid })} />)}
-                </div>
-                <button onClick={() => dispatch({ type: 'choose', uid: null })}>Don't discard</button>
-              </>
-            ) : (
-              <>
-                <h3>Magic Spring: trash a card</h3>
-                <p>It leaves your deck for good. Good for Stumbles!</p>
-                <div className="cards">
-                  {[...me.playArea, ...me.discard].map((uid) => (
-                    <Card key={uid} uid={uid} small onClick={() => dispatch({ type: 'choose', uid })} />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {state.pending && !handHidden && !botTurn && <PendingDialog state={state} dispatch={dispatch} />}
 
       {state.over && <GameOver state={state} controllers={controllers} onRestart={() => setState(null)} />}
     </div>

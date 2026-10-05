@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { produce } from 'immer';
+import { cardDef } from './cards';
 import { applyMove, available, dragonAttack, moveOptions, RuleError } from './engine';
-import { finalScores } from './scoring';
+import { cardPoints, finalScores } from './scoring';
 import { createGame, MAX_HEALTH } from './setup';
 import type { GameState, Move } from './types';
 
@@ -45,7 +46,7 @@ describe('setup', () => {
   it('starts with no Dragon Attack cards in the Dungeon Row', () => {
     for (let seed = 1; seed < 30; seed++) {
       const s = createGame(['A', 'B'], seed);
-      expect(s.dungeonRow.every((c) => c && !c.startsWith('orcGrunt') && !c.startsWith('dangerMonster'))).toBe(true);
+      expect(s.dungeonRow.every((c) => c && !cardDef(c).dragonAttack)).toBe(true);
     }
   });
 
@@ -102,9 +103,9 @@ describe('playing cards', () => {
 
   it('The Mountain King needs a crown', () => {
     const s = playAll(withHand(game(), ['mountainKing']));
-    expect(available(s)).toMatchObject({ swords: 1, boots: 0 });
+    expect(available(s)).toEqual({ skill: 2, swords: 0, boots: 0 });
     const crowned = playAll(withHand(edit(game(), (d) => { d.players[0].tokens.push({ kind: 'crown', value: 10 }); }), ['mountainKing']));
-    expect(available(crowned)).toMatchObject({ swords: 2, boots: 1 });
+    expect(available(crowned)).toEqual({ skill: 2, swords: 1, boots: 1 });
   });
 
   it('Sleight of Hand: discard a card to draw two', () => {
@@ -143,11 +144,11 @@ describe('Dungeon Row and Reserve', () => {
     expect(me(s).gold).toBe(4);
   });
 
-  it('Crystal Golem can only be fought in a Crystal Cave', () => {
+  it('Crystal Golem can only be fought in a Crystal Cave, and gives 3 Skill', () => {
     const s = playAll(withHand(row(game(), ['crystalGolem']), ['mercenary', 'mercenary']));
     expectRule(() => applyMove(s, { type: 'fight', slot: 0 }), /Crystal Cave/);
     const inCave = edit(s, (d) => { d.players[0].room = 'c4'; });
-    expect(applyMove(inCave, { type: 'fight', slot: 0 }).turn.teleports).toBe(1);
+    expect(available(applyMove(inCave, { type: 'fight', slot: 0 })).skill).toBe(2 + 3);
   });
 
   it('a Device is used right away, not kept', () => {
@@ -280,22 +281,12 @@ describe('turns and the dragon', () => {
     let s = edit(game(), (d) => {
       d.dungeonRow[0] = null;
       d.dungeonRow[1] = null;
-      d.dungeonDeck.unshift('orcGrunt#x1', 'dangerMonster#x1');
+      d.dungeonDeck.unshift('orcGrunt#x1', 'kobold#x1');
     });
     s = play(s, { type: 'playAll' }, { type: 'endTurn' });
-    expect(s.dungeonRow.slice(0, 2)).toEqual(['orcGrunt#x1', 'dangerMonster#x1']);
+    expect(s.dungeonRow.slice(0, 2)).toEqual(['orcGrunt#x1', 'kobold#x1']);
     expect(s.log.filter((l) => l.includes('Dragon attack'))).toHaveLength(1);
     expect(s.clankArea).toEqual({ red: 0, yellow: 0 }); // all moved into the bag
-  });
-
-  it('house rule: an empty Dungeon Deck is refilled from the Dungeon discard pile', () => {
-    const s = play(edit(withHand(game(), ['burgle']), (d) => {
-      d.dungeonRow[0] = null;
-      d.dungeonDeck = [];
-      d.dungeonDiscard = ['orcGrunt#d1'];
-    }), { type: 'playAll' }, { type: 'endTurn' });
-    expect(s.dungeonRow[0]).toBe('orcGrunt#d1');
-    expect(s.log.some((l) => l.includes('Dragon attack'))).toBe(true); // attacks keep coming
   });
 
   it('dragon attack: player cubes deal damage, black cubes are set aside', () => {
@@ -309,7 +300,7 @@ describe('turns and the dragon', () => {
   });
 
   it('Arrive: all players get +1 Clank! when the card is revealed', () => {
-    const start = withHand(edit(game(), (d) => { d.dungeonRow[0] = null; d.dungeonDeck.unshift('arriveMonster#x1'); }), ['burgle']);
+    const start = withHand(edit(game(), (d) => { d.dungeonRow[0] = null; d.dungeonDeck.unshift('overlord#x1'); }), ['burgle']);
     const s = play(start, { type: 'playAll' }, { type: 'endTurn' });
     expect(s.clankArea).toEqual({ red: 4, yellow: 3 }); // 3 + 1 and 2 + 1
   });
@@ -370,5 +361,143 @@ describe('knock-outs, countdown and scoring', () => {
     const tie = edit(s, (d) => { d.players[0].gold = 11; });
     expect(finalScores(tie).scores.map((x) => x.total)).toEqual([46, 46]);
     expect(finalScores(tie).winner!.player.name).toBe('Ben'); // Artifact 25 beats 10
+  });
+});
+
+// ---------- cards from the photos ----------
+
+describe('Dungeon cards with new effects', () => {
+  const row = (s: GameState, cards: string[]) => edit(s, (d) => { d.dungeonRow = cards.map((c, i) => `${c}#r${i}`); });
+  const at = (s: GameState, room: string, extra?: (d: GameState) => void) =>
+    edit(s, (d) => { d.players[d.current].room = room; extra?.(d); });
+  const playFirst = (s: GameState) => applyMove(s, { type: 'play', uid: me(s).hand[0] });
+
+  it('Gems: +2 Clank! when acquired; Gem Collector makes them 2 Skill cheaper', () => {
+    let s = playAll(withHand(row(game(), ['sapphire']), ['burgle', 'burgle', 'gemCollector']));
+    expect(s.clankArea.red).toBe(1); // 3 - 2
+    s = applyMove(s, { type: 'buy', slot: 0 });
+    expect(available(s).skill).toBe(4 - 2);
+    expect(s.clankArea.red).toBe(3);
+  });
+
+  it('Search: every gain of Gold after it is 1 bigger', () => {
+    expect(me(playAll(withHand(game(), ['search', 'treasureMap']))).gold).toBe(6);
+    expect(me(playAll(withHand(game(), ['treasureMap', 'search']))).gold).toBe(5);
+  });
+
+  it('Tattle: each other player gets +1 Clank!', () => {
+    expect(playAll(withHand(game(), ['tattle'])).clankArea).toEqual({ red: 3, yellow: 3 });
+  });
+
+  it('Acquire effects: Boots of Swiftness +1 Boot, Cleric of the Sun heals', () => {
+    let s = playAll(withHand(row(edit(game(), (d) => { d.players[0].damage = 2; }), ['bootsOfSwiftness', 'clericOfTheSun']),
+      ['burgle', 'burgle', 'burgle', 'burgle', 'burgle', 'explore', 'explore']));
+    s = play(s, { type: 'buy', slot: 0 }, { type: 'buy', slot: 1 });
+    expect(available(s).boots).toBe(2 + 1);
+    expect(me(s).damage).toBe(1);
+  });
+
+  it('Underworld Dealing: 1 Gold, or 7 Gold for two Secret Tomes', () => {
+    let s = playAll(withHand(game(), ['underworldDealing']));
+    expect(s.pending).toEqual({ kind: 'option', card: 'underworldDealing#t0' });
+    expectRule(() => applyMove(s, { type: 'chooseOption', index: 1 }), /7 Gold/);
+    s = playAll(withHand(edit(game(), (d) => { d.players[0].gold = 8; }), ['underworldDealing']));
+    s = applyMove(s, { type: 'chooseOption', index: 1 });
+    expect(me(s).gold).toBe(1);
+    expect(me(s).discard.filter((c) => c.startsWith('secretTome'))).toHaveLength(2);
+    expect(s.reserve.secretTome).toHaveLength(10);
+  });
+
+  it('Apothecary: discard a card, then choose', () => {
+    let s = playFirst(withHand(game(), ['apothecary', 'stumble']));
+    expect(s.pending?.kind).toBe('discardToChoose');
+    s = applyMove(s, { type: 'choose', uid: 'stumble#t1' });
+    s = applyMove(s, { type: 'chooseOption', index: 0 });
+    expect(available(s).swords).toBe(3);
+    expect(s.pending).toBeNull();
+  });
+
+  it('Master Burglar trashes a Burgle, nothing else', () => {
+    let s = playAll(withHand(edit(game(), (d) => { d.players[0].discard = ['burgle#x', 'stumble#x']; }), ['masterBurglar']));
+    expectRule(() => applyMove(s, { type: 'choose', uid: 'stumble#x' }), /Burgle/);
+    s = applyMove(s, { type: 'choose', uid: 'burgle#x' });
+    expect(me(s).discard).toEqual(['stumble#x']);
+  });
+
+  it('Treasure Hunter replaces a Dungeon Row card and ignores its Dragon Attack', () => {
+    let s = playAll(withHand(edit(row(game(), ['ladder']), (d) => { d.dungeonDeck.unshift('orcGrunt#x1'); }), ['treasureHunter']));
+    s = applyMove(s, { type: 'chooseOption', index: 0 });
+    expect(s.dungeonRow[0]).toBe('orcGrunt#x1');
+    expect(s.dungeonDiscard).toContain('ladder#r0');
+    expect(s.log.some((l) => l.includes('Dragon attack'))).toBe(false);
+  });
+
+  it('Shrine: on arrival 3 dragon cubes go back in the bag; use it to heal', () => {
+    const arrive = play(withHand(edit(game(), (d) => {
+      d.bag.black = 20;
+      d.dungeonRow[0] = null;
+      d.dungeonDeck.unshift('shrine#x1');
+    }), ['burgle']), { type: 'playAll' }, { type: 'endTurn' });
+    expect(arrive.bag.black).toBe(23);
+    let s = playAll(withHand(row(edit(game(), (d) => { d.players[0].damage = 2; }), ['shrine']), ['burgle', 'burgle']));
+    s = play(s, { type: 'useDevice', slot: 0 }, { type: 'chooseOption', index: 1 });
+    expect(me(s).damage).toBe(1);
+  });
+
+  it('Deep: the Cave Troll is fought only in the Depths', () => {
+    const s = playAll(withHand(row(game(), ['caveTroll']), ['mercenary', 'mercenary']));
+    expectRule(() => applyMove(at(s, 'r1'), { type: 'fight', slot: 0 }), /Depths/);
+    const won = applyMove(at(s, 'm1'), { type: 'fight', slot: 0 });
+    expect(me(won).gold).toBe(3);
+    expect(me(won).hand).toHaveLength(2);
+  });
+
+  it('Flying Carpet: no monster damage in tunnels; Dead Run: Crystal Caves do not stop you', () => {
+    const carpet = playAll(withHand(at(game(), 'c4'), ['flyingCarpet']));
+    expect(me(applyMove(carpet, { type: 'move', to: 'm1' })).damage).toBe(0);
+    let run = playAll(withHand(at(game(), 'r2'), ['deadRun']));
+    run = play(run, { type: 'move', to: 'c2' }, { type: 'move', to: 'r2' });
+    expect(me(run).room).toBe('r2');
+  });
+
+  it('Wand of Recall teleports once you have an Artifact, even if it comes later', () => {
+    let s = playAll(withHand(at(game(), 'c5', (d) => { d.roomTokens.c5 = [{ kind: 'artifact', value: 5 }]; d.turn.canTakeToken = true; }), ['wandOfRecall']));
+    expect(s.turn.teleports).toBe(0);
+    s = applyMove(s, { type: 'takeToken', index: 0 });
+    expect(s.turn.teleports).toBe(1);
+  });
+
+  it('Mister Whiskers: the dragon attacks, or -2 Clank!', () => {
+    const s = playAll(withHand(game(), ['misterWhiskers']));
+    expect(applyMove(s, { type: 'chooseOption', index: 0 }).log.some((l) => l.includes('Dragon attack'))).toBe(true);
+    expect(applyMove(s, { type: 'chooseOption', index: 1 }).clankArea.red).toBe(1);
+  });
+
+  it('Wand of Wind: take a secret from an adjacent room', () => {
+    const s = playAll(withHand(at(game(), 'r2', (d) => { d.roomTokens = { r3: [{ kind: 'minorSecret', secret: 'skillBoost' }] }; }), ['wandOfWind']));
+    const t = play(s, { type: 'chooseOption', index: 1 }, { type: 'chooseOption', index: 0 });
+    expect(available(t).skill).toBe(2);
+    expect(t.roomTokens.r3).toEqual([]);
+    const none = playAll(withHand(at(game(), 'r2', (d) => { d.roomTokens = {}; }), ['wandOfWind']));
+    expectRule(() => applyMove(none, { type: 'chooseOption', index: 1 }), /adjacent/);
+  });
+
+  it('Archaeologist: +2 Skill with a monkey idol', () => {
+    expect(available(playFirst(withHand(game(), ['archaeologist']))).skill).toBe(0);
+    const idol = edit(game(), (d) => { d.players[0].tokens.push({ kind: 'idol' }); });
+    expect(available(playFirst(withHand(idol, ['archaeologist']))).skill).toBe(2);
+  });
+
+  it('"?" points: Duke, Wizard, Dwarven Peddler, Dragon\'s Eye', () => {
+    const p = edit(game(), (d) => {
+      d.players[0].gold = 12;
+      d.players[0].discard = ['secretTome#1', 'secretTome#2'];
+      d.players[0].tokens = [{ kind: 'idol' }, { kind: 'kept', secret: 'chalice' }, { kind: 'mastery' }];
+    }).players[0];
+    expect(cardPoints(p, 'theDuke#1')).toBe(2);
+    expect(cardPoints(p, 'wizard#1')).toBe(4);
+    expect(cardPoints(p, 'dwarvenPeddler#1')).toBe(4);
+    expect(cardPoints(p, 'dragonsEye#1')).toBe(10);
+    expect(cardPoints({ ...p, tokens: [] }, 'dragonsEye#1')).toBe(0);
   });
 });

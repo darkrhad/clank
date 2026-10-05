@@ -1,6 +1,5 @@
 import { CARDS, cardDef } from '../engine/cards';
-import { available, currentPlayer } from '../engine/engine';
-import { ROOMS } from '../engine/map';
+import { available, cardCost, placeProblem } from '../engine/engine';
 import { RAGE_TRACK } from '../engine/setup';
 import type { GameState, Move } from '../engine/types';
 import { Card } from './Card';
@@ -13,7 +12,6 @@ interface Props {
 
 export function DungeonPanel({ state, dispatch, readOnly }: Props) {
   const left = available(state);
-  const inCave = ROOMS[currentPlayer(state).room].type === 'cave';
   const busy = !!state.pending || state.over || !!readOnly;
 
   return (
@@ -27,13 +25,13 @@ export function DungeonPanel({ state, dispatch, readOnly }: Props) {
           const d = cardDef(uid);
           const monster = d.banner === 'monster';
           const device = d.banner === 'device';
-          const need = monster ? d.defeatSwords ?? 0 : d.cost ?? 0;
+          const need = monster ? d.defeatSwords ?? 0 : device ? d.cost ?? 0 : cardCost(state, d);
           const have = monster ? left.swords : left.skill;
-          const blockedHere = d.onlyInCrystalCave && !inCave;
+          const blockedHere = placeProblem(state, d);
           const action: Move = monster ? { type: 'fight', slot } : device ? { type: 'useDevice', slot } : { type: 'buy', slot };
           return (
-            <Card key={uid} uid={uid}>
-              <button disabled={busy || have < need || blockedHere} onClick={() => dispatch(action)}>
+            <Card key={uid} uid={uid} cost={need}>
+              <button disabled={busy || have < need || !!blockedHere} title={blockedHere} onClick={() => dispatch(action)}>
                 {monster ? 'Fight' : device ? 'Use' : 'Acquire'}
               </button>
             </Card>
