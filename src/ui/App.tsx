@@ -35,8 +35,9 @@ function Setup({ onStart }: { onStart: (names: string[], controllers: Controller
     setSeats(seats.map((s, j) => (j === i ? { ...s, ...change } : s)));
 
   return (
+    <div className="setup-screen">
     <div className="setup">
-      <h1>Clank! <small>demo</small></h1>
+      <h1>Loảng xoảng! <small>demo</small></h1>
       <p>2–4 players. Each seat can be a person or an AI.</p>
       {seats.map((seat, i) => (
         <div key={i} className={`seat pc-${COLORS[i]}`}>
@@ -64,9 +65,9 @@ function Setup({ onStart }: { onStart: (names: string[], controllers: Controller
         <li><b>Hard</b>: weighs risk: the dragon, its health and time. Leaves early to start the countdown.</li>
       </ul>
       <p className="muted small">
-        Learning demo based on the rulebook. The dungeon deck only contains cards shown in the rulebook;
-        values marked "assumed" are guesses. All seats AI = watch the bots play.
+        Learning demo based on the rulebook, with the full 100-card Dungeon deck. All seats AI = watch the bots play.
       </p>
+    </div>
     </div>
   );
 }
@@ -183,7 +184,7 @@ export default function App() {
   return (
     <div className="game">
       <header className="topbar">
-        <h1>Clank! <small>demo</small></h1>
+        <h1>Loảng xoảng! <small>demo</small></h1>
         <div className="players">
           {state.players.map((p, i) => (
             <div key={p.id} className={`player-chip pc-${p.color}${i === state.current ? ' current' : ''}`}>
@@ -192,7 +193,7 @@ export default function App() {
               <span>{STATUS[p.status]}</span>
               <span title="Health"><Heart /> {MAX_HEALTH - p.damage}</span>
               <span title="Gold"><Gold n={p.gold} /></span>
-              <span title="Cubes in the Clank! area">🔔 {state.clankArea[p.id]}</span>
+              <span title="Cubes in the Loảng xoảng! area">🔔 {state.clankArea[p.id]}</span>
               {p.tokens.filter((t) => t.kind === 'artifact').map((t, j) => <span key={j} className="chip">{tokenName(t)}</span>)}
             </div>
           ))}

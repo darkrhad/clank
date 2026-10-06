@@ -1,4 +1,4 @@
-// Clank! front-side board as data. Positions are pixels in public/board.png
+// Loảng xoảng! front-side board as data. Positions are pixels in public/board.png
 // (907x905), read from the rulebook's setup picture and checked by eye.
 //
 // Room types: entrance, room, cave (Crystal Cave: entering ends Boot movement),

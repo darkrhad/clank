@@ -67,5 +67,5 @@ export function dragonRiskPerTurn(s: GameState, p: Player): number {
   return (mine / total) * RAGE_TRACK[s.rage] * attacksPerTurn;
 }
 
-// Cubes the player still has to make Clank! with (or to take tunnel damage)
+// Cubes the player still has to make Loảng xoảng! with (or to take tunnel damage)
 export const cubesLeft = (p: Player) => Math.min(p.supply, CLANK_CUBES);

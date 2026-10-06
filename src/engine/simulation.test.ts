@@ -75,7 +75,7 @@ function simulate(seed: number, players: number) {
 // Things that must always hold, whatever happened
 function checkInvariants(s: GameState) {
   for (const p of s.players) {
-    // Every Clank! cube is somewhere: supply, Clank! area, bag, health meter or set aside
+    // Every Loảng xoảng! cube is somewhere: supply, Loảng xoảng! area, bag, health meter or set aside
     expect(p.supply + s.clankArea[p.id] + (s.bag[p.id] ?? 0) + p.damage).toBeLessThanOrEqual(CLANK_CUBES);
     expect(p.supply).toBeGreaterThanOrEqual(0);
     expect(p.damage).toBeLessThanOrEqual(MAX_HEALTH);

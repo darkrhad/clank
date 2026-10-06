@@ -35,7 +35,9 @@ button.primary { background: #8a5a12; border-color: var(--accent); font-weight: 
 .c-red { color: var(--red); } .c-yellow { color: var(--yellow); } .c-green { color: var(--green); } .c-blue { color: var(--blue); }
 
 /* Setup */
-.setup { max-width: 420px; margin: 10vh auto; padding: 24px; background: var(--panel); border-radius: 12px; display: grid; gap: 10px; }
+/* Setup screen: Huế at dusk behind the menu */
+.setup-screen { min-height: 100vh; padding: 10vh 16px; box-sizing: border-box; background: url('./parts/menu-bg.jpg') center bottom / cover no-repeat, var(--bg); }
+.setup { max-width: 420px; margin: 0 auto; padding: 24px; background: rgba(36, 30, 23, .86); backdrop-filter: blur(3px); border-radius: 12px; display: grid; gap: 10px; box-shadow: 0 8px 30px rgba(0, 0, 0, .45); }
 .setup input { padding: 8px 10px; border-radius: 6px; border: 2px solid var(--pc); background: var(--bg); color: var(--text); font: inherit; }
 
 /* Layout */
@@ -155,7 +157,7 @@ main { display: grid; grid-template-columns: minmax(0, 760px) minmax(320px, 1fr)
   font: 900 16px system-ui; color: #fff; background: #d04a1c;
   clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);
 }
-.c-strip { flex: none; background: #2a2420; color: #f3ead6; font-size: 8.5px; line-height: 1.15; padding: 2px 4px; border-top: 2px solid #c99a3b; } /* wraps to 2 lines if needed */
+.c-strip { flex: none; background: #2a2420; color: #f3ead6; font-size: 8.5px; line-height: 1.15; padding: 2px 4px; border-top: 2px solid #c99a3b; white-space: nowrap; overflow: hidden; } /* one line, text shrinks to fit (Bar) */
 .c-strip b { color: #f0b653; letter-spacing: .03em; }
 .c-text {
   flex: 1; min-height: 0; overflow: hidden; padding: 4px 8px 8px; font-size: 10.5px; line-height: 1.25; text-align: center; color: #3b2a1a;
@@ -172,7 +174,7 @@ main { display: grid; grid-template-columns: minmax(0, 760px) minmax(320px, 1fr)
 /* Options side by side: 1 –OR– ♥ */
 .c-choices { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 1px 4px; }
 .c-or { font-weight: 700; font-size: 9.5px; }
-.c-acquire { background: #232a33; color: #f3ead6; font-size: 9.5px; padding: 3px 34px 3px 6px; border-top: 2px solid #9fb4c8; }
+.c-acquire { flex: none; background: #232a33; color: #f3ead6; font-size: 9.5px; padding: 3px 34px 3px 6px; border-top: 2px solid #9fb4c8; white-space: nowrap; overflow: hidden; }
 .c-acquire b { letter-spacing: .04em; margin-right: 4px; }
 .c-cost {
   position: absolute; right: 0; bottom: 0; width: 34px; height: 30px;

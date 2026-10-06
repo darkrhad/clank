@@ -34,7 +34,7 @@ export interface Player {
   room: RoomId;
   status: PlayerStatus;
   damage: number; // cubes on the health meter
-  supply: number; // Clank! cubes still in the personal supply
+  supply: number; // Loảng xoảng! cubes still in the personal supply
   gold: number;
   tokens: Token[];
 }
@@ -43,8 +43,8 @@ export interface Turn {
   earned: { skill: number; swords: number; boots: number };
   spent: { skill: number; swords: number; boots: number };
   teleports: number;
-  clankMade: number; // Clank! gained this turn, for Swagger
-  clankCredit: number; // leftover negative Clank! that cancels later Clank! this turn
+  clankMade: number; // Loảng xoảng! gained this turn, for Swagger
+  clankCredit: number; // leftover negative Loảng xoảng! that cancels later Loảng xoảng! this turn
   exhausted: boolean; // entered a Crystal Cave: no more Boots this turn
   canTakeToken: boolean; // only once per entering a room
   conditionalDraws: CardUid[]; // "if ... draw a card" cards that already drew

@@ -285,7 +285,7 @@ function reveal(s: GameState, slot: number): CardUid | undefined {
   s.dungeonRow[slot] = card;
   const d = cardDef(card);
   if (d.arrive) {
-    log(s, `${d.name} arrives${d.arrive.allPlayersClank ? ': all players get +1 Clank!' : '.'}`);
+    log(s, `${d.name} arrives${d.arrive.allPlayersClank ? ': all players get +1 Loảng xoảng!' : '.'}`);
     applyEffect(s, currentPlayer(s), d.arrive);
   }
   return card;

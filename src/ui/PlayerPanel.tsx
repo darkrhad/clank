@@ -51,7 +51,7 @@ export function PlayerPanel({ state, dispatch, canUndo, onUndo }: Props) {
         <span title="Boots: move through tunnels"><Boot /> {isExhausted(state) ? 0 : left.boots}</span>
         <span title="Gold"><Gold n={me.gold} /></span>
         <span title="Damage on your health meter"><Heart /> {MAX_HEALTH - me.damage}/{MAX_HEALTH}</span>
-        <span title="Your cubes in the Clank! area / in your supply">🔔 {state.clankArea[me.id]} <small>({me.supply} left)</small></span>
+        <span title="Your cubes in the Loảng xoảng! area / in your supply">🔔 {state.clankArea[me.id]} <small>({me.supply} left)</small></span>
         {state.turn.teleports ? <span title="Teleports">🌀 {state.turn.teleports}</span> : null}
       </div>
 

@@ -64,7 +64,7 @@ export function DungeonPanel({ state, dispatch, readOnly }: Props) {
             ))}
           </div>
           <p className="small">
-            Clank! area: {state.players.map((p) => <b key={p.id} className={`c-${p.color}`}>{state.clankArea[p.id]} </b>)}
+            Loảng xoảng! area: {state.players.map((p) => <b key={p.id} className={`c-${p.color}`}>{state.clankArea[p.id]} </b>)}
             <br />
             Bag: {state.bag.black} black{state.players.map((p) => (state.bag[p.id] ? <b key={p.id} className={`c-${p.color}`}> · {state.bag[p.id]}</b> : null))}
           </p>

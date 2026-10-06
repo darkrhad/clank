@@ -57,7 +57,7 @@ export function drawCards(state: { seed: number }, player: Player, n: number): n
 }
 
 export function createGame(names: string[], seed = Date.now()): GameState {
-  if (names.length < 2 || names.length > 4) throw new Error('Clank! is for 2 to 4 players');
+  if (names.length < 2 || names.length > 4) throw new Error('Loảng xoảng! is for 2 to 4 players');
   const rng = { seed };
 
   const players: Player[] = names.map((name, i) => {
@@ -108,7 +108,7 @@ export function createGame(names: string[], seed = Date.now()): GameState {
   }
   const dungeonDeck = shuffle(rng, [...deck, ...setAside]);
 
-  // First player 3 Clank!, second 2, third 1, fourth 0
+  // First player 3 Loảng xoảng!, second 2, third 1, fourth 0
   const clankArea: Record<string, number> = {};
   players.forEach((p, i) => {
     const n = Math.max(0, 3 - i);

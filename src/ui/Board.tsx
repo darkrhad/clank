@@ -32,7 +32,7 @@ export function Board({ state, interactive, showTunnels, onMove, onTeleport }: P
 
   return (
     <div className={`board${interactive ? '' : ' watching'}`}>
-      <img src="/board.png" alt="Clank! board" />
+      <img src="/board.png" alt="Loảng xoảng! board" />
       <svg viewBox="0 0 907 905">
         {showTunnels && TUNNELS.filter((t) => !t.wrap).map((t, i) => {
           const a = ROOMS[t.from], b = ROOMS[t.to];
@@ -86,7 +86,7 @@ export function Board({ state, interactive, showTunnels, onMove, onTeleport }: P
           )),
         )}
 
-        {/* Clank! area: everyone's cubes, until the next dragon attack */}
+        {/* Loảng xoảng! area: everyone's cubes, until the next dragon attack */}
         {state.players
           .flatMap((p) => Array.from({ length: state.clankArea[p.id] }, () => p))
           .map((p, i) => (
@@ -94,7 +94,7 @@ export function Board({ state, interactive, showTunnels, onMove, onTeleport }: P
               x={CLANK_AREA.x + (i % CLANK_AREA.columns) * CLANK_AREA.step}
               y={CLANK_AREA.y + Math.floor(i / CLANK_AREA.columns) * CLANK_AREA.step}
               width={CLANK_AREA.cube} height={CLANK_AREA.cube} rx={1} fill={PAWN_COLOR[p.color]}>
-              <title>{p.name}: {state.clankArea[p.id]} Clank! in the Clank! area</title>
+              <title>{p.name}: {state.clankArea[p.id]} Loảng xoảng! in the Loảng xoảng! area</title>
             </rect>
           ))}
 

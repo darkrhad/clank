@@ -5,7 +5,7 @@
 //
 // Levels:
 //   easy   — knows the goal, plays sloppily: random buys, wrong turns,
-//            ignores Clank! and takes tunnel damage instead of using Swords
+//            ignores Loảng xoảng! and takes tunnel damage instead of using Swords
 //   medium — plans routes, picks the Artifact by value against distance,
 //            buys useful cards, blocks monsters, heals, buys Crowns / a Key
 //   hard   — medium plus a risk model: chooses the Artifact by expected score

@@ -23,7 +23,7 @@ export function BotPanel({ state, level, paused }: { state: GameState; level: Le
         <span title="Boots"><Boot /> {isExhausted(state) ? 0 : left.boots}</span>
         <span title="Gold"><Gold n={bot.gold} /></span>
         <span title="Health"><Heart /> {MAX_HEALTH - bot.damage}/{MAX_HEALTH}</span>
-        <span title="Clank! area">🔔 {state.clankArea[bot.id]}</span>
+        <span title="Loảng xoảng! area">🔔 {state.clankArea[bot.id]}</span>
       </div>
       <p className="muted small">
         In {roomLabel(bot.room)} · {bot.hand.length} cards in hand (hidden)

@@ -73,7 +73,7 @@ export function RichText({ text }: { text: string }) {
 
 const DRAW = ['', 'Draw a card.', 'Draw two cards.', 'Draw three cards.'];
 
-// An effect as the card prints it, e.g. DEFEAT: (3), all other players get +1 Clank!
+// An effect as the card prints it, e.g. DEFEAT: (3), all other players get +1 Loảng xoảng!
 export function EffectLine({ e }: { e: Effect & Partial<Choice> }) {
   const parts: ReactNode[] = [];
   if (e.gold) parts.push(<Gold n={e.gold} />);
@@ -81,8 +81,8 @@ export function EffectLine({ e }: { e: Effect & Partial<Choice> }) {
   if (e.swords) parts.push(<>{repeat(e.swords, (i) => <Sword key={i} />)}</>);
   if (e.boots) parts.push(<>{repeat(e.boots, (i) => <Boot key={i} />)}</>);
   if (e.heal) parts.push(<>{repeat(e.heal, (i) => <Heart key={i} />)}</>);
-  if (e.clank) parts.push(`${e.clank > 0 ? '+' : ''}${e.clank} Clank!`);
-  if (e.othersClank) parts.push(`others +${e.othersClank} Clank!`);
+  if (e.clank) parts.push(`${e.clank > 0 ? '+' : ''}${e.clank} Loảng xoảng!`);
+  if (e.othersClank) parts.push(`others +${e.othersClank} Loảng xoảng!`);
   if (e.draw) parts.push(DRAW[e.draw] ?? `Draw ${e.draw} cards.`);
   if (e.teleport) parts.push('Teleport to an adjacent room.');
   if (e.attack) parts.push('The dragon attacks');

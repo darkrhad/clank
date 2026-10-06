@@ -58,7 +58,7 @@ function useFit<T extends HTMLElement>(key: string, min: number) {
 function TextBox({ d }: { d: CardDef }) {
   const device = d.banner === 'device';
   const monster = d.banner === 'monster';
-  const ref = useFit<HTMLDivElement>(d.id, 7);
+  const ref = useFit<HTMLDivElement>(d.id, 6.5);
   return (
     <div className="c-text" ref={ref}>
       {d.gold ? <div className="c-big"><Gold n={d.gold} /></div> : null}
@@ -80,6 +80,12 @@ interface Props {
   cost?: number; // the cost right now, if it differs (Gem Collector)
 }
 
+// One-line bar (DANGER / ARRIVE, ACQUIRE): the text shrinks until it fits the width
+function Bar({ className, k, children }: { className: string; k: string; children: ReactNode }) {
+  const ref = useFit<HTMLDivElement>(k, 6);
+  return <div className={className} ref={ref}>{children}</div>;
+}
+
 function Name({ name }: { name: string }) {
   const ref = useFit<HTMLSpanElement>(name, 8);
   return <span className="c-name" ref={ref}>{name}</span>;
@@ -88,7 +94,7 @@ function Name({ name }: { name: string }) {
 export function Card({ uid, id, onClick, disabled, small, children, cost }: Props) {
   const d = uid ? cardDef(uid) : CARDS[id!];
   const strip = d.danger ? ['DANGER', '+1 cube for dragon attacks.']
-    : d.arrive?.allPlayersClank ? ['ARRIVE', `All players +${d.arrive.allPlayersClank} Clank!`]
+    : d.arrive?.allPlayersClank ? ['ARRIVE', `All players +${d.arrive.allPlayersClank} Loảng xoảng!`]
     : d.arrive?.returnCubes ? ['ARRIVE', `Put ${d.arrive.returnCubes} dragon cubes back in the bag.`]
     : null;
   const discounted = cost !== undefined && d.cost !== undefined && cost !== d.cost;
@@ -114,9 +120,9 @@ export function Card({ uid, id, onClick, disabled, small, children, cost }: Prop
           {d.danger && <span className="badge-danger" title="Danger">+</span>}
         </div>
 
-        {strip && <div className="c-strip"><b>{strip[0]}</b> {strip[1]}</div>}
+        {strip && <Bar className="c-strip" k={d.id}><b>{strip[0]}</b> {strip[1]}</Bar>}
         <TextBox d={d} />
-        {d.acquire && <div className="c-acquire"><b>ACQUIRE</b> <EffectLine e={d.acquire} /></div>}
+        {d.acquire && <Bar className="c-acquire" k={d.id}><b>ACQUIRE</b> <EffectLine e={d.acquire} /></Bar>}
 
         {d.defeatSwords ? (
           <div className="c-swords" title={`${d.defeatSwords} Swords to defeat`}>

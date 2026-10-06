@@ -35,5 +35,5 @@ export const COUNTDOWN_SPACES = [
   { x: 460, y: 68 },
 ];
 
-// Clank! area: the banner, below the logo
+// Loảng xoảng! area: the banner, below the logo
 export const CLANK_AREA = { x: 748, y: 232, columns: 9, step: 13, cube: 11 };

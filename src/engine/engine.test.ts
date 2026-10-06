@@ -31,7 +31,7 @@ const expectRule = (fn: () => unknown, message: RegExp) => {
 // ---------- setup ----------
 
 describe('setup', () => {
-  it('deals 5 cards, places Clank! and tokens', () => {
+  it('deals 5 cards, places Loảng xoảng! and tokens', () => {
     const s = game(2);
     expect(s.players.map((p) => p.hand.length)).toEqual([5, 5]);
     expect(s.players.map((p) => p.deck.length)).toEqual([5, 5]);
@@ -63,7 +63,7 @@ describe('playing cards', () => {
     expect(available(s)).toEqual({ skill: 3, swords: 0, boots: 2 });
   });
 
-  it('adds and removes Clank!, and leftover negative Clank! cancels later Clank!', () => {
+  it('adds and removes Loảng xoảng!, and leftover negative Loảng xoảng! cancels later Loảng xoảng!', () => {
     let s = withHand(game(), ['moveSilently', 'stumble']);
     s = play(s, { type: 'play', uid: me(s).hand[0] });
     expect(s.clankArea.red).toBe(1); // 3 at setup, -2
@@ -95,7 +95,7 @@ describe('playing cards', () => {
     expect(me(s).hand).toHaveLength(0); // only once
   });
 
-  it('Swagger counts Clank! made before and after it', () => {
+  it('Swagger counts Loảng xoảng! made before and after it', () => {
     let s = withHand(game(), ['stumble', 'swagger', 'stumble']);
     s = playAll(s);
     expect(available(s).skill).toBe(2);
@@ -299,7 +299,7 @@ describe('turns and the dragon', () => {
     expect(s.bag.red).toBe(0);
   });
 
-  it('Arrive: all players get +1 Clank! when the card is revealed', () => {
+  it('Arrive: all players get +1 Loảng xoảng! when the card is revealed', () => {
     const start = withHand(edit(game(), (d) => { d.dungeonRow[0] = null; d.dungeonDeck.unshift('overlord#x1'); }), ['burgle']);
     const s = play(start, { type: 'playAll' }, { type: 'endTurn' });
     expect(s.clankArea).toEqual({ red: 4, yellow: 3 }); // 3 + 1 and 2 + 1
@@ -372,7 +372,7 @@ describe('Dungeon cards with new effects', () => {
     edit(s, (d) => { d.players[d.current].room = room; extra?.(d); });
   const playFirst = (s: GameState) => applyMove(s, { type: 'play', uid: me(s).hand[0] });
 
-  it('Gems: +2 Clank! when acquired; Gem Collector makes them 2 Skill cheaper', () => {
+  it('Gems: +2 Loảng xoảng! when acquired; Gem Collector makes them 2 Skill cheaper', () => {
     let s = playAll(withHand(row(game(), ['sapphire']), ['burgle', 'burgle', 'gemCollector']));
     expect(s.clankArea.red).toBe(1); // 3 - 2
     s = applyMove(s, { type: 'buy', slot: 0 });
@@ -385,7 +385,7 @@ describe('Dungeon cards with new effects', () => {
     expect(me(playAll(withHand(game(), ['treasureMap', 'search']))).gold).toBe(5);
   });
 
-  it('Tattle: each other player gets +1 Clank!', () => {
+  it('Tattle: each other player gets +1 Loảng xoảng!', () => {
     expect(playAll(withHand(game(), ['tattle'])).clankArea).toEqual({ red: 3, yellow: 3 });
   });
 
@@ -467,7 +467,7 @@ describe('Dungeon cards with new effects', () => {
     expect(s.turn.teleports).toBe(1);
   });
 
-  it('Mister Whiskers: the dragon attacks, or -2 Clank!', () => {
+  it('Mister Whiskers: the dragon attacks, or -2 Loảng xoảng!', () => {
     const s = playAll(withHand(game(), ['misterWhiskers']));
     expect(applyMove(s, { type: 'chooseOption', index: 0 }).log.some((l) => l.includes('Dragon attack'))).toBe(true);
     expect(applyMove(s, { type: 'chooseOption', index: 1 }).clankArea.red).toBe(1);
