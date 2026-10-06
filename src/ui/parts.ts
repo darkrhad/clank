@@ -35,6 +35,12 @@ export const PARTS: { name: string; what: string }[] = [
   { name: 'arrive', what: 'Arrive badge' },
   { name: 'companion', what: 'Companion icon' },
   { name: 'back', what: 'Card back' },
+  { name: 'tile-room', what: 'Board: room tile' },
+  { name: 'tile-cave', what: 'Board: Crystal Cave tile' },
+  { name: 'tile-market', what: 'Board: Market tile' },
+  { name: 'tile-fountain', what: 'Board: Fountain tile' },
+  { name: 'tile-shrine', what: 'Board: Monkey Shrine tile' },
+  { name: 'tile-entrance', what: 'Board: entrance tile' },
 ];
 
 // Makes the parts available to the CSS: a variable with the image
