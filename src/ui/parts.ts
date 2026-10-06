@@ -41,6 +41,10 @@ export const PARTS: { name: string; what: string }[] = [
   { name: 'tile-fountain', what: 'Board: Fountain tile' },
   { name: 'tile-shrine', what: 'Board: Monkey Shrine tile' },
   { name: 'tile-entrance', what: 'Board: entrance tile' },
+  { name: 'token-artifact', what: 'Board: Artifact token (value added by the game)' },
+  { name: 'token-major', what: 'Board: major secret token' },
+  { name: 'token-minor', what: 'Board: minor secret token' },
+  { name: 'token-idol', what: 'Board: monkey idol token' },
 ];
 
 // Makes the parts available to the CSS: a variable with the image

@@ -11,6 +11,14 @@ import { PART_FILES } from './parts';
 const PAWN_COLOR = { red: '#e53935', yellow: '#fdd835', green: '#43a047', blue: '#1e88e5' };
 const SIZE = { w: 907, h: 905 };
 
+// Painted token images (src/ui/parts/token-*.png); without one, a colored badge
+const TOKEN_ART: Partial<Record<Token['kind'], string>> = {
+  artifact: 'token-artifact', majorSecret: 'token-major', minorSecret: 'token-minor', idol: 'token-idol',
+};
+const TOKEN_NAME: Partial<Record<Token['kind'], string>> = {
+  artifact: 'Artifact', majorSecret: 'Major secret', minorSecret: 'Minor secret', idol: 'Monkey idol',
+};
+
 function tokenBadge(t: Token): { label: string; cls: string } {
   switch (t.kind) {
     case 'artifact': return { label: String(t.value), cls: 'artifact' };
@@ -200,11 +208,24 @@ export function Board({ state, interactive, onMove, onTeleport }: Props) {
           tokens.map((t, i) => {
             const r = ROOMS[room];
             const b = tokenBadge(t);
-            const x = r.x - 16 + i * 14, y = r.y + 16;
+            const art = TOKEN_ART[t.kind] && PART_FILES[TOKEN_ART[t.kind]!];
+            const R = art ? 11 : 9;
+            const x = r.x - 16 + i * (art ? 18 : 14), y = r.y + 17;
             return (
-              <g key={`${room}-${i}`} className={`token ${b.cls}`}>
-                <circle cx={x} cy={y} r={9} />
-                <text x={x} y={y + 4}>{b.label}</text>
+              <g key={`${room}-${i}`} className={`token ${b.cls}${art ? ' painted' : ''}`}>
+                {art ? (
+                  <>
+                    <circle cx={x} cy={y} r={R + 1} className="token-rim" />
+                    <image href={art} x={x - R} y={y - R} width={2 * R} height={2 * R} />
+                    {t.kind === 'artifact' && <text x={x} y={y + 4}>{t.value}</text>}
+                  </>
+                ) : (
+                  <>
+                    <circle cx={x} cy={y} r={R} />
+                    <text x={x} y={y + 4}>{b.label}</text>
+                  </>
+                )}
+                <title>{TOKEN_NAME[t.kind]}{t.kind === 'artifact' ? ` (${t.value} points)` : ''}</title>
               </g>
             );
           }),
@@ -214,10 +235,15 @@ export function Board({ state, interactive, onMove, onTeleport }: Props) {
         {state.players.map((p, i) => {
           if (p.status !== 'playing' && p.status !== 'escaped') return null;
           const pos = ROOMS[p.room];
-          const x = pos.x - 12 + (i % 2) * 24, y = pos.y - 8 + Math.floor(i / 2) * 16;
+          // Up to 4 figures side by side on the room, a little apart
+          const x = pos.x - 14 + (i % 2) * 28 + Math.floor(i / 2) * 7, y = pos.y - 8 + Math.floor(i / 2) * 17;
           return (
             <g key={p.id} className={`pawn${p === me ? ' active' : ''}`}>
-              <circle cx={x} cy={y} r={10} fill={PAWN_COLOR[p.color]} />
+              {/* A hooded thief: cloak and hood in the player's color, dark ink outline */}
+              <ellipse cx={x} cy={y + 13} rx={11} ry={3.5} className="pawn-shadow" />
+              <path d={`M${x - 10} ${y + 13} Q${x - 10} ${y - 3} ${x} ${y - 5} Q${x + 10} ${y - 3} ${x + 10} ${y + 13} Z`} fill={PAWN_COLOR[p.color]} />
+              <circle cx={x} cy={y - 10} r={6.5} fill={PAWN_COLOR[p.color]} />
+              <ellipse cx={x} cy={y - 9} rx={3.6} ry={3.3} className="pawn-face" />
               <title>{p.name}{p.status === 'escaped' ? ' (escaped)' : ''}</title>
             </g>
           );

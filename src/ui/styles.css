@@ -103,8 +103,14 @@ main { display: grid; grid-template-columns: minmax(0, 760px) minmax(320px, 1fr)
 .cube { stroke: #fff; stroke-width: 2; filter: drop-shadow(1px 2px 1px rgba(0,0,0,.8)); }
 .dragon-marker circle { fill: #111; stroke: var(--accent); stroke-width: 3; }
 .dragon-marker text { font-size: 18px; text-anchor: middle; pointer-events: none; }
-.pawn circle { stroke: #000; stroke-width: 3; }
-.pawn.active circle { stroke: #fff; stroke-width: 4; }
+/* Pawns: hooded thieves in the player's color with a dark ink outline; the active one glows gold */
+.pawn path, .pawn circle { stroke: #120f0c; stroke-width: 2; stroke-linejoin: round; }
+.pawn .pawn-face { fill: #120f0c; stroke: none; }
+.pawn .pawn-shadow { fill: rgba(0, 0, 0, .55); stroke: none; }
+.pawn.active path:not(.pawn-face), .pawn.active circle { stroke: #ffd36a; stroke-width: 2.6; filter: drop-shadow(0 0 3px #ffb52a); }
+/* Painted tokens: a thin dark rim, the Artifact value written on top */
+.token.painted .token-rim { fill: #120f0c; stroke: #c9a24a; stroke-width: 1.2; }
+.token.painted text { font: bold 9px system-ui; fill: #fff4d6; paint-order: stroke; stroke: #120f0c; stroke-width: 2.5px; }
 
 /* Player panel */
 .player-panel { border-top: 4px solid var(--pc); }
