@@ -56,7 +56,20 @@ main { display: grid; grid-template-columns: minmax(0, 760px) minmax(320px, 1fr)
 .board { position: relative; width: 100%; aspect-ratio: 907 / 905; }
 .board img, .board svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .board img { border-radius: 8px; }
-.tunnel-line { stroke: rgba(255,255,255,.35); stroke-width: 3; }
+/* Rooms and tunnels drawn on the painted board (pale ink on the dark night) */
+.tunnel line { stroke: rgba(236, 226, 205, .7); stroke-width: 3.5; stroke-linecap: round; stroke-dasharray: 1 7; }
+.tunnel.one-way line { stroke-dasharray: none; stroke-width: 2.5; }
+.arrow-head { fill: rgba(236, 226, 205, .85); }
+.tunnel-marks rect { fill: rgba(20, 18, 24, .85); stroke: rgba(236, 226, 205, .6); stroke-width: 1; }
+.tunnel-marks text { font: 11px system-ui; text-anchor: middle; pointer-events: none; }
+.room-shape > rect, .room-shape > circle, .room-shape > path { fill: rgba(18, 16, 22, .72); stroke: #d9c9a3; stroke-width: 2.5; }
+.room-shape.t-cave > circle { fill: rgba(16, 40, 38, .78); stroke: #7fd6c2; }
+.room-shape.t-market > rect { stroke: #e7b54a; stroke-width: 3; }
+.room-shape.t-market text { font: bold 7px system-ui; letter-spacing: .08em; fill: #e7b54a; text-anchor: middle; }
+.room-shape.t-fountain > rect { stroke: #e36a5c; }
+.room-shape.t-fountain text { font: 15px system-ui; fill: #e8483c; text-anchor: middle; }
+.room-shape.t-shrine > rect { stroke: #e7b54a; }
+.room-shape.t-entrance > path { fill: rgba(60, 20, 18, .8); stroke: #e7b54a; }
 .target { cursor: pointer; }
 .target line { stroke-width: 4; stroke-dasharray: 6 5; }
 .target circle { stroke-width: 4; }

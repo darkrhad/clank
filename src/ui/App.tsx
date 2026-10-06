@@ -104,7 +104,6 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [shownTo, setShownTo] = useState<number | null>(null); // whose hand is visible
   const [swordPrompt, setSwordPrompt] = useState<MoveOption | null>(null);
-  const [showTunnels, setShowTunnels] = useState(false);
   const [paused, setPaused] = useState(false);
   const [speed, setSpeed] = useState<Speed>('normal');
 
@@ -208,7 +207,6 @@ export default function App() {
             </select>
           </div>
         )}
-        <label className="toggle"><input type="checkbox" checked={showTunnels} onChange={(e) => setShowTunnels(e.target.checked)} /> tunnels</label>
         <button onClick={() => { if (confirm('Quit this game?')) setState(null); }}>Quit</button>
       </header>
 
@@ -216,7 +214,6 @@ export default function App() {
         <Board
           state={state}
           interactive={!botTurn}
-          showTunnels={showTunnels}
           onMove={onMove}
           onTeleport={(room) => dispatch({ type: 'move', to: room, teleport: true })}
         />

@@ -1,5 +1,5 @@
-// Loảng xoảng! front-side board as data. Positions are pixels in public/board.png
-// (907x905), read from the rulebook's setup picture and checked by eye.
+// The board as data. Positions are pixels on the 907x905 board picture (src/ui/parts/board.jpg),
+// first read from the rulebook's setup picture and checked by eye.
 //
 // Room types: entrance, room, cave (Crystal Cave: entering ends Boot movement),
 // market, fountain (heal 1 on entering), shrine (Monkey Shrine).
