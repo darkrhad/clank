@@ -166,10 +166,10 @@ const defs: CardDef[] = [
     text: 'Draw a card. If you have a monkey idol, +{skill:2}.', source: P },
   { id: 'apothecary', name: 'Apothecary', banner: 'dungeon', companion: true, discardToChoose: true, cost: 3, points: 2,
     choices: [{ label: '3 Swords', swords: 3 }, { label: '2 Gold', gold: 2 }, { label: 'Heal 1', heal: 1 }],
-    text: 'Discard a card to choose one of the following:', source: P },
+    text: 'Discard a card to choose:', source: P },
   { id: 'dwarvenPeddler', name: 'Dwarven Peddler', banner: 'dungeon', companion: true, boots: 1, gold: 2, cost: 4,
     bonus: { per: 'twoTreasures', points: 4 },
-    text: 'Worth {points:4} if you have two of the following: chalice, dragon egg, and monkey idol.', source: P },
+    text: 'Worth {points:4} if you have 2 of: chalice, dragon egg, monkey idol.', source: P },
   { id: 'misterWhiskers', name: 'Mister Whiskers', banner: 'dungeon', companion: true, cost: 1, points: 1, dragonAttack: true,
     choices: [{ label: 'The dragon attacks', attack: true }, { label: '-2 Clank!', clank: -2 }],
     source: P },
@@ -186,7 +186,7 @@ const defs: CardDef[] = [
   gem('ruby', 'Ruby', 6),
   gem('diamond', 'Diamond', 8),
   { ...gem('dragonsEye', "Dragon's Eye", 5), points: 0, deep: true, bonus: { per: 'mastery', points: 10 },
-    text: 'Deep (Acquire only in the Depths.) Draw a card. Worth {points:10} if you have a mastery token.' },
+    text: 'Deep: buy only in the Depths. Draw a card. Worth {points:10} with a mastery token.' },
 
   // ----- Dungeon deck: devices (cost = Skill to use) -----
   { id: 'ladder', name: 'Ladder', banner: 'device', cost: 3, use: { boots: 2 }, source: P },

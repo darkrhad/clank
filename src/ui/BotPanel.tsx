@@ -4,6 +4,7 @@ import { roomLabel } from '../engine/map';
 import { MAX_HEALTH } from '../engine/setup';
 import type { GameState } from '../engine/types';
 import { Card } from './Card';
+import { Boot, Gold, Heart, Skill, Sword } from './Symbols';
 import { tokenName } from './PlayerPanel';
 
 // What everyone can see during an AI turn: played cards and resources, not the hand
@@ -17,11 +18,11 @@ export function BotPanel({ state, level, paused }: { state: GameState; level: Le
         <span className="where">{paused ? 'paused' : <span className="thinking">thinking…</span>}</span>
       </header>
       <div className="resources">
-        <span title="Skill">◆ {left.skill}</span>
-        <span title="Swords">🗡️ {left.swords}</span>
-        <span title="Boots">👢 {isExhausted(state) ? 0 : left.boots}</span>
-        <span title="Gold">🪙 {bot.gold}</span>
-        <span title="Health">❤ {MAX_HEALTH - bot.damage}/{MAX_HEALTH}</span>
+        <span title="Skill"><Skill n={left.skill} /></span>
+        <span title="Swords"><Sword /> {left.swords}</span>
+        <span title="Boots"><Boot /> {isExhausted(state) ? 0 : left.boots}</span>
+        <span title="Gold"><Gold n={bot.gold} /></span>
+        <span title="Health"><Heart /> {MAX_HEALTH - bot.damage}/{MAX_HEALTH}</span>
         <span title="Clank! area">🔔 {state.clankArea[bot.id]}</span>
       </div>
       <p className="muted small">

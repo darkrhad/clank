@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { cardDef, CARDS, type CardDef } from '../engine/cards';
 import { ART } from './art';
 import { Boot, CompanionIcon, EffectLine, Gold, Points, RichText, Skill, Sword } from './Symbols';
@@ -29,26 +29,43 @@ function LeftColumn({ d }: { d: CardDef }) {
 
 function Or({ d }: { d: CardDef }) {
   return (
-    <div className="c-choices">
+    <>
       {d.choices!.map((c, i) => (
         <Fragment key={i}>{i > 0 && <span className="c-or">–OR–</span>}<span><EffectLine e={c} /></span></Fragment>
       ))}
-    </div>
+    </>
   );
 }
 
-// The text box. Gold a card gives is printed here as a big coin.
+// Shrinks the text of an element until it fits its box (all cards have the same size)
+function useFit<T extends HTMLElement>(key: string, min: number) {
+  const ref = useRef<T>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.fontSize = '';
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    while ((el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1) && size > min) {
+      size -= 0.5;
+      el.style.fontSize = `${size}px`;
+    }
+  }, [key, min]);
+  return ref;
+}
+
+// The text box. Gold a card gives is printed here as a big coin. Every card
+// has the same size, so long text shrinks until it fits.
 function TextBox({ d }: { d: CardDef }) {
   const device = d.banner === 'device';
   const monster = d.banner === 'monster';
+  const ref = useFit<HTMLDivElement>(d.id, 7);
   return (
-    <div className="c-text">
+    <div className="c-text" ref={ref}>
       {d.gold ? <div className="c-big"><Gold n={d.gold} /></div> : null}
       {d.text && <p><RichText text={d.text} /></p>}
       {monster && d.defeat && <p><b>DEFEAT:</b> <EffectLine e={d.defeat} /></p>}
-      {device && <div className="c-use">USE:</div>}
-      {device && d.use && <p><EffectLine e={d.use} /></p>}
-      {d.choices && <Or d={d} />}
+      {device && d.use && <p><b>USE:</b> <EffectLine e={d.use} /></p>}
+      {d.choices && <div className="c-choices">{device && <b>USE:</b>}<Or d={d} /></div>}
     </div>
   );
 }
@@ -63,11 +80,15 @@ interface Props {
   cost?: number; // the cost right now, if it differs (Gem Collector)
 }
 
+function Name({ name }: { name: string }) {
+  const ref = useFit<HTMLSpanElement>(name, 8);
+  return <span className="c-name" ref={ref}>{name}</span>;
+}
+
 export function Card({ uid, id, onClick, disabled, small, children, cost }: Props) {
   const d = uid ? cardDef(uid) : CARDS[id!];
-  const sub = subtitle(d);
-  const strip = d.danger ? ['DANGER', 'Pull +1 cube for dragon attacks.']
-    : d.arrive?.allPlayersClank ? ['ARRIVE', `All players get +${d.arrive.allPlayersClank} Clank!`]
+  const strip = d.danger ? ['DANGER', '+1 cube for dragon attacks.']
+    : d.arrive?.allPlayersClank ? ['ARRIVE', `All players +${d.arrive.allPlayersClank} Clank!`]
     : d.arrive?.returnCubes ? ['ARRIVE', `Put ${d.arrive.returnCubes} dragon cubes back in the bag.`]
     : null;
   const discounted = cost !== undefined && d.cost !== undefined && cost !== d.cost;
@@ -75,15 +96,14 @@ export function Card({ uid, id, onClick, disabled, small, children, cost }: Prop
     <div
       className={`card t-${color(d)}${small ? ' small' : ''}${onClick && !disabled ? ' clickable' : ''}${disabled ? ' disabled' : ''}`}
       onClick={disabled ? undefined : onClick}
-      title={`${d.name}${d.source === 'assumed' ? ' (values assumed)' : ''}`}
+      title={`${d.name}${subtitle(d) ? ` · ${subtitle(d)}` : ''}${d.source === 'assumed' ? ' (values assumed)' : ''}`}
     >
       <div className="c-face">
         <div className="c-banner">
           {d.companion && <CompanionIcon />}
-          <span className="c-name">{d.name}</span>
+          <Name name={d.name} />
           {d.points || d.bonus ? <Points n={d.points || '?'} /> : null}
         </div>
-        {sub && <div className="c-sub"><span>{sub}</span></div>}
 
         <div className={`c-art${ART[d.id] ? ' has-art' : ''}`} style={ART[d.id] ? { backgroundImage: `url(${ART[d.id]})` } : undefined}>
           <LeftColumn d={d} />
@@ -94,9 +114,9 @@ export function Card({ uid, id, onClick, disabled, small, children, cost }: Prop
           {d.danger && <span className="badge-danger" title="Danger">+</span>}
         </div>
 
-        {!small && strip && <div className="c-strip"><b>{strip[0]}</b> {strip[1]}</div>}
-        {!small && <TextBox d={d} />}
-        {!small && d.acquire && <div className="c-acquire"><b>ACQUIRE</b> <EffectLine e={d.acquire} /></div>}
+        {strip && <div className="c-strip"><b>{strip[0]}</b> {strip[1]}</div>}
+        <TextBox d={d} />
+        {d.acquire && <div className="c-acquire"><b>ACQUIRE</b> <EffectLine e={d.acquire} /></div>}
 
         {d.defeatSwords ? (
           <div className="c-swords" title={`${d.defeatSwords} Swords to defeat`}>

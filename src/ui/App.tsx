@@ -9,6 +9,7 @@ import { Board } from './Board';
 import { BotPanel } from './BotPanel';
 import { DungeonPanel } from './DungeonPanel';
 import { PendingDialog } from './PendingDialog';
+import { Gold, Heart } from './Symbols';
 import { PlayerPanel, tokenName } from './PlayerPanel';
 
 const STATUS = { playing: 'in the dungeon', escaped: 'escaped', rescued: 'rescued', dead: 'knocked out' };
@@ -56,6 +57,7 @@ function Setup({ onStart }: { onStart: (names: string[], controllers: Controller
         onClick={() => onStart(used.map((s, i) => s.name.trim() || `Player ${i + 1}`), used.map((s) => s.kind as Controller))}>
         Start game
       </button>
+      <p className="small"><a href="#studio" style={{ color: 'var(--accent)' }}>Card studio</a>: all cards, art and parts</p>
       <ul className="muted small levels">
         <li><b>Easy</b>: knows the goal but plays sloppily. Grabs the nearest Artifact, ignores noise.</li>
         <li><b>Medium</b>: plans routes, picks Artifacts by value and distance, blocks monsters, heals.</li>
@@ -188,8 +190,8 @@ export default function App() {
               <b>{p.name}</b>
               {controllers[i] !== 'human' && <span className="bot-badge">{controllerLabel(controllers[i])}</span>}
               <span>{STATUS[p.status]}</span>
-              <span title="Health">❤ {MAX_HEALTH - p.damage}</span>
-              <span title="Gold">🪙 {p.gold}</span>
+              <span title="Health"><Heart /> {MAX_HEALTH - p.damage}</span>
+              <span title="Gold"><Gold n={p.gold} /></span>
               <span title="Cubes in the Clank! area">🔔 {state.clankArea[p.id]}</span>
               {p.tokens.filter((t) => t.kind === 'artifact').map((t, j) => <span key={j} className="chip">{tokenName(t)}</span>)}
             </div>

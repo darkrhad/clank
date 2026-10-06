@@ -86,7 +86,12 @@ main { display: grid; grid-template-columns: minmax(0, 760px) minmax(320px, 1fr)
 .player-panel header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .where { color: var(--muted); font-size: 12px; }
 .resources { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.resources span { background: var(--panel-2); border-radius: 6px; padding: 4px 8px; font-weight: 600; }
+.resources > span { display: inline-flex; align-items: center; gap: 4px; background: var(--panel-2); border-radius: 6px; padding: 3px 8px; font-weight: 600; }
+/* Card symbols in the resource bar: a bit smaller than on the cards */
+.resources .sym-skill { width: 18px; height: 18px; margin: 2px 3px; }
+.resources .sym-sword, .resources .sym-boot { width: 20px; height: 20px; }
+.resources .sym-gold { width: 20px; height: 20px; font-size: 11px; }
+.resources .sym-heart { width: 16px; height: 16px; }
 .resources small { color: var(--muted); font-weight: normal; }
 .actions { display: flex; gap: 8px; margin-top: 14px; }
 .actions .primary { margin-left: auto; }
@@ -102,11 +107,11 @@ main { display: grid; grid-template-columns: minmax(0, 760px) minmax(320px, 1fr)
   background: #3a3d42; color: #2b2217; border-radius: 9px; border: 2px solid #1d1f22; padding: 3px;
   box-shadow: 0 2px 6px rgba(0,0,0,.45); font-family: Georgia, 'Times New Roman', serif;
 }
-.card.small { width: 116px; }
+.card.small { zoom: .78; } /* the same card, smaller */
 .card.clickable { cursor: pointer; }
 .card.clickable:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,.5); }
 .card.disabled { opacity: .6; }
-.card.empty { background: transparent; border: 2px dashed var(--line); color: var(--muted); align-items: center; justify-content: center; box-shadow: none; min-height: 200px; }
+.card.empty { background: transparent; border: 2px dashed var(--line); color: var(--muted); align-items: center; justify-content: center; box-shadow: none; aspect-ratio: 5 / 7; }
 .t-starter { --banner: #8193a6; --banner-dark: #5b6b7c; }
 .t-reserve { --banner: #b58b2a; --banner-dark: #86651c; }
 .t-tome { --banner: #d4b03c; --banner-dark: #9d7f22; }
@@ -114,24 +119,24 @@ main { display: grid; grid-template-columns: minmax(0, 760px) minmax(320px, 1fr)
 .t-device { --banner: #8a62b5; --banner-dark: #5d3f80; }
 .t-monster { --banner: #c43d33; --banner-dark: #8a241d; }
 
-.c-face { position: relative; display: flex; flex-direction: column; flex: 1; border-radius: 6px; overflow: hidden; background: #e9dbb4; }
+/* Every card has the same shape (5:7) and the same picture area (4:3) */
+.c-face { position: relative; display: flex; flex-direction: column; flex: none; aspect-ratio: 5 / 7; border-radius: 6px; overflow: hidden; background: #e9dbb4; }
 .c-banner {
-  display: flex; align-items: center; gap: 4px; padding: 4px 5px; min-height: 26px;
+  display: flex; align-items: center; gap: 4px; padding: 0 5px; height: 30px; flex: none; box-sizing: border-box;
   background: linear-gradient(var(--banner), var(--banner-dark)); color: #fff;
   border-bottom: 2px solid rgba(0,0,0,.35);
 }
-.c-name { flex: 1; text-align: center; font-weight: 700; font-size: 12px; line-height: 1.1; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
-.c-sub { text-align: center; margin-top: -1px; background: #3a3d42; line-height: 1; }
+.c-name { flex: 1; min-width: 0; max-height: 28px; overflow: hidden; text-align: center; font-weight: 700; font-size: 12px; line-height: 1.1; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+/* The type tab sits on the top edge of the picture, as on the printed cards */
+.c-sub { position: absolute; top: 30px; left: 0; right: 0; z-index: 2; text-align: center; line-height: 1; pointer-events: none; }
 .c-sub span { display: inline-block; background: #1f2023; color: #f3ead6; font-size: 9.5px; font-weight: 700; padding: 2px 8px 3px; }
 .c-art {
-  position: relative; min-height: 64px; padding: 4px;
+  position: relative; flex: none; aspect-ratio: 4 / 3; padding: 4px; box-sizing: border-box;
   background: radial-gradient(ellipse at 60% 40%, #9aa3a8, #5f676c 75%);
   border-bottom: 3px solid #8b8f93;
 }
-.small .c-art { min-height: 40px; }
 /* Artwork fills the picture area (4:3, like the printed window) */
-.c-art.has-art { aspect-ratio: 4 / 3; background-size: cover; background-position: center; }
-.small .c-art.has-art { min-height: 0; }
+.c-art.has-art { background-size: cover; background-position: center; }
 .c-left { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 .c-badges { position: absolute; right: 4px; bottom: 4px; display: flex; flex-direction: column; gap: 3px; align-items: center; }
 .badge-dragon {
@@ -150,18 +155,22 @@ main { display: grid; grid-template-columns: minmax(0, 760px) minmax(320px, 1fr)
   font: 900 16px system-ui; color: #fff; background: #d04a1c;
   clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);
 }
-.c-strip { background: #2a2420; color: #f3ead6; font-size: 9.5px; line-height: 1.25; padding: 3px 5px; border-top: 2px solid #c99a3b; }
+.c-strip { flex: none; background: #2a2420; color: #f3ead6; font-size: 8.5px; line-height: 1.15; padding: 2px 4px; border-top: 2px solid #c99a3b; } /* wraps to 2 lines if needed */
 .c-strip b { color: #f0b653; letter-spacing: .03em; }
 .c-text {
-  flex: 1; min-height: 58px; padding: 5px 8px 18px; font-size: 10.5px; line-height: 1.3; text-align: center; color: #3b2a1a;
+  flex: 1; min-height: 0; overflow: hidden; padding: 4px 8px 8px; font-size: 10.5px; line-height: 1.25; text-align: center; color: #3b2a1a;
   background: linear-gradient(#ecdfba, #ddcb9b);
 }
 .c-text p { margin: 0 0 3px; }
-.c-big { margin: 2px 0 4px; }
-.c-big .sym-gold { width: 22px; height: 22px; font-size: 13px; }
+/* Monsters: keep the bottom free for the row of Swords */
+.t-monster .c-text { padding-top: 2px; padding-bottom: 20px; }
+.c-text > :last-child { margin-bottom: 0; }
+.c-big { margin: 0 0 2px; line-height: 1; }
+.c-big .sym-gold { width: 19px; height: 19px; font-size: 12px; }
 .c-text b, .c-use { font-weight: 700; letter-spacing: .02em; }
 .c-use { border-bottom: 1px solid #8a7550; margin: 0 10px 3px; padding-bottom: 1px; }
-.c-choices { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+/* Options side by side: 1 –OR– ♥ */
+.c-choices { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 1px 4px; }
 .c-or { font-weight: 700; font-size: 9.5px; }
 .c-acquire { background: #232a33; color: #f3ead6; font-size: 9.5px; padding: 3px 34px 3px 6px; border-top: 2px solid #9fb4c8; }
 .c-acquire b { letter-spacing: .04em; margin-right: 4px; }
@@ -208,6 +217,50 @@ main { display: grid; grid-template-columns: minmax(0, 760px) minmax(320px, 1fr)
 .sym-companion { width: 17px; height: 17px; flex: none; }
 .sym-companion svg { width: 100%; height: 100%; fill: #26282b; stroke: #fff; stroke-width: 1.5; }
 .sym-companion .fill { fill: #fff; stroke: none; }
+
+/* Card parts from src/ui/parts/ (see parts.ts): each rule only applies when that image exists */
+.part-frame .card { border: 12px solid transparent; border-image: var(--part-frame) 8% / 12px stretch; padding: 0; background: none; box-shadow: none; }
+.part-frame .card .c-face { border-radius: 2px; }
+.part-banner-blue .t-dungeon .c-banner { background: var(--part-banner-blue) center / 100% 100% no-repeat; border-bottom: 0; }
+.part-banner-red .t-monster .c-banner { background: var(--part-banner-red) center / 100% 100% no-repeat; border-bottom: 0; }
+.part-banner-purple .t-device .c-banner { background: var(--part-banner-purple) center / 100% 100% no-repeat; border-bottom: 0; }
+.part-banner-gold .t-reserve .c-banner { background: var(--part-banner-gold) center / 100% 100% no-repeat; border-bottom: 0; }
+.part-banner-yellow .t-tome .c-banner { background: var(--part-banner-yellow) center / 100% 100% no-repeat; border-bottom: 0; }
+.part-banner-grey .t-starter .c-banner { background: var(--part-banner-grey) center / 100% 100% no-repeat; border-bottom: 0; }
+.part-tab .c-sub span { background: var(--part-tab) center / 100% 100% no-repeat; padding: 3px 12px 4px; }
+.part-stone .c-art:not(.has-art) { background: var(--part-stone) center / cover; }
+.part-parchment .c-text { background: var(--part-parchment) center / cover; }
+.part-strip .c-strip { background: var(--part-strip) center / 100% 100% no-repeat; border-top: 0; }
+.part-acquire .c-acquire { background: var(--part-acquire) center / 100% 100% no-repeat; border-top: 0; }
+.part-cost .c-cost { background: var(--part-cost) center / 100% 100% no-repeat; clip-path: none; }
+.part-cost .c-cost.discounted { filter: hue-rotate(-90deg); }
+.part-skill .sym-skill::before { background: var(--part-skill) center / contain no-repeat; border: 0; box-shadow: none; transform: none; inset: -3px; }
+.part-sword .sym-sword { background: var(--part-sword) center / contain no-repeat; border: 0; }
+.part-boot .sym-boot { background: var(--part-boot) center / contain no-repeat; border: 0; }
+.part-sword .sym-sword svg, .part-boot .sym-boot svg, .part-heart .sym-heart svg, .part-companion .sym-companion svg { display: none; }
+.part-gold .sym-gold { background: var(--part-gold) center / contain no-repeat; border: 0; }
+.part-points .sym-points { background: var(--part-points) center / contain no-repeat; clip-path: none; }
+.part-heart .sym-heart { background: var(--part-heart) center / contain no-repeat; }
+.part-companion .sym-companion { background: var(--part-companion) center / contain no-repeat; }
+.part-dragon .badge-dragon { background: var(--part-dragon) center / contain no-repeat; box-shadow: none; }
+.part-dragon .badge-dragon i { visibility: hidden; }
+/* Blank shield from the artist; the game draws the white plus on it */
+.part-danger .badge-danger { background: var(--part-danger) center / contain no-repeat; clip-path: none; width: 26px; height: 26px; color: #fff; font-size: 17px; text-shadow: 0 0 2px #5a1a08, 0 1px 1px #5a1a08; padding-bottom: 2px; box-sizing: border-box; }
+.part-arrive .badge-arrive { background: var(--part-arrive) center / contain no-repeat; border: 0; color: transparent; }
+
+/* Card studio */
+.studio { padding: 16px; display: flex; flex-direction: column; gap: 12px; max-width: 1400px; margin: 0 auto; }
+.studio-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.studio-head a { color: var(--accent); }
+.studio-cards { align-items: flex-start; }
+.studio-parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.studio-part { display: flex; flex-direction: column; gap: 3px; padding: 6px; border: 1px solid var(--line); border-radius: 6px; font-size: 11px; color: var(--muted); }
+.studio-part.done { border-color: var(--ok); }
+.studio-part code { color: var(--text); font-size: 12px; }
+.studio-part .thumb { height: 54px; display: grid; place-items: center; border-radius: 4px; color: var(--muted);
+  background: repeating-conic-gradient(#2a241d 0 25%, #221c16 0 50%) 0 0 / 14px 14px; background-size: contain; background-repeat: no-repeat; background-position: center; }
+.studio-part:not(.done) .thumb { background: repeating-conic-gradient(#2a241d 0 25%, #221c16 0 50%) 0 0 / 14px 14px; font-style: italic; }
+.card-back { width: 150px; aspect-ratio: 5 / 7; border-radius: 9px; background-size: cover; background-position: center; }
 
 /* Dungeon panel */
 .dungeon-panel { margin-top: 12px; }

@@ -2,16 +2,16 @@
 
 Make one picture per card and save it here as `<id>.png` (or .jpg / .webp), e.g. `monkeyBot.png`.
 
-## Style block (paste at the start of every prompt)
+## Style block (paste at the end of every prompt)
 
-> Fantasy board-game card illustration, painted digital art, warm torchlight inside a
-> stone dungeon, rich colors, soft rim light, clean readable silhouette, centered subject,
-> 4:3 landscape. Keep the left edge and the bottom-right corner simple and uncluttered
-> (dim stone wall). No text, no letters, no numbers, no frame, no border, no UI.
+> Hand-drawn fantasy illustration, loose ink outlines and pencil sketch lines, watercolor
+> washes, visible brush strokes, imperfect wobbly lines, textured watercolor paper, muted
+> earthy colors with warm torchlight, inside a dark underground stone dungeon, centered subject, full bleed with color reaching all
+> edges, 4:3 landscape. Left edge and bottom-right corner plain. No text, no letters, no frame.
 
 Settings: aspect ratio **4:3** (e.g. 1024 × 768). Generate the same seed/style for a whole
 group so the cards look like one set. If a tool supports a negative prompt, use:
-`text, letters, watermark, signature, frame, border, blurry, extra limbs`.
+`text, letters, watermark, signature, frame, border, white border, blank paper margin, blurry, extra limbs, 3d render, photorealistic, smooth digital painting, glossy, airbrushed`.
 
 For cards with the 🐉 symbol, the game draws a dragon badge in the bottom-right corner, so
 that corner must stay plain.
@@ -21,12 +21,12 @@ that corner must stay plain.
 | id | Prompt (after the style block) |
 |---|---|
 | `burgle` | A sly young thief in a hooded leather coat crouching over an open treasure chest, gold glinting |
-| `stumble` | A thief's boot catching on a loose flagstone, a clay pot toppling and shattering, motion blur |
-| `sidestep` | A nimble thief pressed flat against a wall, sliding sideways past a sleeping guard |
+| `stumble` | A clumsy young thief tripping over a loose flagstone, falling forward with arms flailing, a clay pot shattering on the floor beside him, coins flying |
+| `sidestep` | A nimble hooded thief edging sideways along a narrow stone ledge, back pressed flat against the dungeon wall, one foot stepping to the side, cautious look |
 | `scramble` | A thief scrambling up a pile of rubble on hands and feet, pebbles flying |
 | `mercenary` | A tough sellsword woman with a curved sword over her shoulder, smirking, arms crossed |
 | `explore` | An explorer holding a torch high at the mouth of a dark tunnel, light spilling ahead |
-| `secretTome` | An ancient leather-bound spellbook with glowing runes on a reading stand, dust motes in the light |
+| `secretTome` | An ancient thick leather-bound spellbook lying closed on a stone stand, its cover decorated with glowing swirling patterns and a blue gemstone, a candle beside it |
 | `goblin` | A small green goblin with a crooked dagger and an oversized helmet, grinning, guarding a coin pouch |
 
 ## Dungeon cards: actions and items
@@ -43,20 +43,20 @@ that corner must stay plain.
 | `singingSword` | An elegant sword hovering in the air with glowing musical notes swirling around the blade |
 | `treasureMap` | A weathered treasure map on a stone ledge, red X marks and dotted paths, candlelight |
 | `bootsOfSwiftness` | A pair of copper-and-leather boots with flame patterns and small wings at the heels |
-| `wandOfRecall` | A slender wand with a glowing blue crystal tip lying on a stone slab, faint blue sparks |
+| `wandOfRecall` | A slender wooden magic wand with a glowing blue crystal tip lying on a stone slab, faint blue sparks around the tip |
 | `deadRun` | A thief sprinting at full speed down a corridor, dust trailing, cape flying |
 | `scepterOfTheApeLord` | A golden scepter made of stacked carved monkeys on a stone pedestal |
 | `silverSpear` | A silver spear with an ornate leaf-shaped head mounted on a wall bracket |
-| `flyingCarpet` | A red patterned flying carpet floating above the dungeon floor, gold tassels |
+| `flyingCarpet` | A red patterned magic carpet floating in mid-air above the dungeon floor, gold tassels hanging down, a soft glow beneath it |
 | `underworldDealing` | A hooded goblin merchant behind a cluttered desk of potions, books and coins, shady deal |
-| `bracersOfAgility` | A pair of polished bronze bracers with engraved swirls on a stone block |
+| `bracersOfAgility` | A pair of leather and bronze wrist bracers (arm guards) with engraved swirls lying on a stone table |
 | `pickaxe` | A miner's pickaxe leaning on a rock wall with gold nuggets at its tip |
 | `elvenBoots` | Elegant green elven boots with silver leaf embroidery on a mossy stone |
-| `wandOfWind` | A twisted wooden wand releasing a swirling gust of wind and leaves |
+| `wandOfWind` | A twisted wooden magic wand held up in a dungeon corridor, a swirling gust of wind, dust and dry leaves spiraling around it |
 | `sneak` | A masked rogue in a dark green cloak creeping in deep shadow, only the eyes lit |
 | `elvenCloak` | A green elven cloak hanging on a hook, shimmering and half-transparent, blending into the wall |
-| `elvenDagger` | An elven dagger with a curved runed blade and a green-wrapped hilt, on stone |
-| `brilliance` | A bearded rogue with a sly grin tapping his temple, a lightbulb-like spark of an idea |
+| `elvenDagger` | An elven dagger with a curved runed blade and a green-wrapped hilt lying on a stone altar in a dungeon |
+| `brilliance` | A bearded rogue with a sly grin raising one finger, a small glowing magical spark of light floating just above his fingertip, sudden bright idea |
 
 ## Dungeon cards: companions
 
@@ -89,8 +89,8 @@ that corner must stay plain.
 |---|---|
 | `sapphire` | A large faceted blue sapphire resting on purple velvet folds, sparkling |
 | `emerald` | A large rectangular-cut green emerald on purple velvet, glowing |
-| `ruby` | A large faceted red ruby on purple velvet, deep red reflections |
-| `diamond` | A large brilliant-cut diamond on purple velvet, rainbow sparkles |
+| `ruby` | A large faceted red ruby resting on purple velvet folds in a dark cave, deep red reflections |
+| `diamond` | A large brilliant-cut diamond resting on purple velvet folds in a dark cave, rainbow sparkles |
 | `dragonsEye` | A glowing orange orb with a slit pupil like a dragon's eye on velvet, fiery |
 
 ## Dungeon cards: devices
@@ -100,7 +100,7 @@ that corner must stay plain.
 | `ladder` | A sturdy wooden ladder leading down into a hole in the dungeon floor, light from below |
 | `teleporter` | A golden mirror frame with wings, its surface a swirling blue magic portal |
 | `shrine` | A round stone shrine with a glowing basin, ringed by melting candles |
-| `dragonShrine` | A stone dragon statue with spread wings over a basin of green glowing liquid |
+| `dragonShrine` | A carved grey stone statue of a dragon with spread stone wings over a basin of green glowing liquid |
 | `theVault` | An open vault door revealing mountains of gold coins spilling onto the floor |
 
 ## Dungeon cards: monsters

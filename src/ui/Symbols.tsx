@@ -82,11 +82,11 @@ export function EffectLine({ e }: { e: Effect & Partial<Choice> }) {
   if (e.boots) parts.push(<>{repeat(e.boots, (i) => <Boot key={i} />)}</>);
   if (e.heal) parts.push(<>{repeat(e.heal, (i) => <Heart key={i} />)}</>);
   if (e.clank) parts.push(`${e.clank > 0 ? '+' : ''}${e.clank} Clank!`);
-  if (e.othersClank) parts.push(`all other players get +${e.othersClank} Clank!`);
+  if (e.othersClank) parts.push(`others +${e.othersClank} Clank!`);
   if (e.draw) parts.push(DRAW[e.draw] ?? `Draw ${e.draw} cards.`);
   if (e.teleport) parts.push('Teleport to an adjacent room.');
   if (e.attack) parts.push('The dragon attacks');
-  if (e.trash) parts.push('Trash a card in your play area or discard pile.');
+  if (e.trash) parts.push('Trash a card.');
   if (e.buyTomes) parts.push(<>Spend <Gold n={7} /> to take two Secret Tomes.</>);
   if (e.adjacentSecret) parts.push('Take a secret from an adjacent room.');
   return <>{parts.map((p, i) => <Fragment key={i}>{i > 0 && ', '}{p}</Fragment>)}</>;

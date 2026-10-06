@@ -4,6 +4,7 @@ import { SECRETS } from '../engine/secrets';
 import { MARKET_PRICE, MAX_HEALTH } from '../engine/setup';
 import type { GameState, Move, Token } from '../engine/types';
 import { Card } from './Card';
+import { Boot, Gold, Heart, Skill, Sword } from './Symbols';
 
 export function tokenName(t: Token): string {
   switch (t.kind) {
@@ -45,11 +46,11 @@ export function PlayerPanel({ state, dispatch, canUndo, onUndo }: Props) {
       </header>
 
       <div className="resources">
-        <span title="Skill: buy cards">◆ {left.skill}</span>
-        <span title="Swords: fight monsters, block tunnel damage">🗡️ {left.swords}</span>
-        <span title="Boots: move through tunnels">👢 {isExhausted(state) ? 0 : left.boots}</span>
-        <span title="Gold">🪙 {me.gold}</span>
-        <span title="Damage on your health meter">❤ {MAX_HEALTH - me.damage}/{MAX_HEALTH}</span>
+        <span title="Skill: buy cards"><Skill n={left.skill} /></span>
+        <span title="Swords: fight monsters, block tunnel damage"><Sword /> {left.swords}</span>
+        <span title="Boots: move through tunnels"><Boot /> {isExhausted(state) ? 0 : left.boots}</span>
+        <span title="Gold"><Gold n={me.gold} /></span>
+        <span title="Damage on your health meter"><Heart /> {MAX_HEALTH - me.damage}/{MAX_HEALTH}</span>
         <span title="Your cubes in the Clank! area / in your supply">🔔 {state.clankArea[me.id]} <small>({me.supply} left)</small></span>
         {state.turn.teleports ? <span title="Teleports">🌀 {state.turn.teleports}</span> : null}
       </div>
