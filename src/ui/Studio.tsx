@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { CARDS, DUNGEON_DECK, type CardDef } from '../engine/cards';
-import { ART } from './art';
+import { ART, STYLE_ART } from './art';
+import { ArtSwitch } from './App';
+import { useArtStyle } from './artStyle';
 import { Card } from './Card';
 import { PART_FILES, PARTS } from './parts';
 
@@ -22,6 +24,8 @@ const ids = [...Object.keys(CARDS).filter((id) => !DUNGEON_DECK[id]), ...Object.
 export function Studio() {
   const [small, setSmall] = useState(false);
   const [onlyMissing, setOnlyMissing] = useState(false);
+  const style = useArtStyle();
+  const styleArt = STYLE_ART[style];
   const withArt = ids.filter((id) => ART[id]).length;
   const partsDone = PARTS.filter((p) => PART_FILES[p.name]).length;
   const missingArt = ids.filter((id) => !ART[id]);
@@ -32,6 +36,7 @@ export function Studio() {
         <h1>Card studio</h1>
         <a href="#">← Back to the game</a>
         <label className="toggle"><input type="checkbox" checked={small} onChange={(e) => setSmall(e.target.checked)} /> small size</label>
+        <ArtSwitch />
         <label className="toggle"><input type="checkbox" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} /> only cards without art</label>
       </header>
 
@@ -52,6 +57,7 @@ export function Studio() {
 
       <section className="panel">
         <h3>Art <small>({withArt} of {ids.length} cards have art in src/ui/art/)</small></h3>
+        {styleArt && <p className="small muted">Viet art: {ids.filter((id) => styleArt[id]).length} cards have their own picture in src/ui/art/vi/, the others show the normal art.</p>}
         {missingArt.length > 0 && (
           <p className="small muted">Missing: {missingArt.map((id) => <code key={id}>{id}</code>).reduce<ReactNode[]>((a, c, i) => (i ? [...a, ', ', c] : [c]), [])}</p>
         )}

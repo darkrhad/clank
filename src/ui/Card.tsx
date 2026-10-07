@@ -1,6 +1,7 @@
 import { Fragment, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { cardDef, CARDS, type CardDef } from '../engine/cards';
 import { artFor } from './art';
+import { useArtStyle } from './artStyle';
 import { cardName, cardText, getLang, t, type Key } from '../i18n';
 import { Boot, CompanionIcon, EffectLine, Gold, Points, RichText, Skill, Sword } from './Symbols';
 
@@ -97,7 +98,7 @@ function Name({ name }: { name: string }) {
 export function Card({ uid, id, onClick, disabled, small, children, cost }: Props) {
   const d = uid ? cardDef(uid) : CARDS[id!];
   const lang = getLang();
-  const art = artFor(d.id, lang);
+  const art = artFor(d.id, useArtStyle());
   const name = cardName(d.id);
   const strip = d.danger ? [t('danger'), t('dangerText')]
     : d.arrive?.allPlayersClank ? [t('arrive'), t('arriveClank', { n: d.arrive.allPlayersClank })]

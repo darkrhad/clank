@@ -18,6 +18,7 @@ import { Gold, Heart } from './Symbols';
 import { PlayerPanel, tokenName } from './PlayerPanel';
 import { cardName, format, LANGS, roomName, secretName, secretText, setLang, t, type Key, type Msg } from '../i18n';
 import { useLang } from './useLang';
+import { ART_STYLES, setArtStyle, useArtStyle } from './artStyle';
 
 const status = (s: GameState['players'][number]['status']) => t(`status.${s}` as Key);
 
@@ -49,6 +50,18 @@ export function LangSwitch() {
     <div className="lang-switch" role="group" aria-label={t('language')}>
       {LANGS.map((l) => (
         <button key={l} className={l === lang ? 'on' : ''} aria-pressed={l === lang} onClick={() => setLang(l)}>{l.toUpperCase()}</button>
+      ))}
+    </div>
+  );
+}
+
+// Fantasy | Viet: which card art to show, whatever the language
+export function ArtSwitch() {
+  const style = useArtStyle();
+  return (
+    <div className="lang-switch" role="group" aria-label={t('artStyle')} title={t('artStyle')}>
+      {ART_STYLES.map((s) => (
+        <button key={s} className={s === style ? 'on' : ''} aria-pressed={s === style} onClick={() => setArtStyle(s)}>{t(s === 'viet' ? 'artViet' : 'artFantasy')}</button>
       ))}
     </div>
   );
@@ -306,6 +319,7 @@ export default function App() {
         )}
         <button onClick={() => setRules(true)}>{t('rules')}</button>
         <AudioButtons />
+        <ArtSwitch />
         <LangSwitch />
         <button onClick={() => { if (confirm(t('quitConfirm'))) setState(null); }}>{t('quit')}</button>
       </header>

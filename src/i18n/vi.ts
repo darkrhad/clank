@@ -159,6 +159,9 @@ export const vi: { [K in keyof typeof en]: (p: P) => string } = {
 
   // ----- Menu -----
   language: () => 'Ngôn ngữ',
+  artStyle: () => 'Tranh thẻ bài',
+  artFantasy: () => 'Fantasy',
+  artViet: () => 'Việt',
   rules: () => 'Luật chơi',
   musicTitle: () => 'Bật/tắt nhạc',
   sfxTitle: () => 'Bật/tắt âm thanh',

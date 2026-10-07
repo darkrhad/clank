@@ -157,6 +157,9 @@ export const en = {
 
   // ----- Menu -----
   language: () => 'Language',
+  artStyle: () => 'Card art',
+  artFantasy: () => 'Fantasy',
+  artViet: () => 'Viet',
   rules: () => 'Rules',
   musicTitle: () => 'Music on/off',
   sfxTitle: () => 'Sound effects on/off',
