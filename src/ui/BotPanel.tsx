@@ -6,6 +6,7 @@ import type { GameState } from '../engine/types';
 import { Card } from './Card';
 import { Boot, Gold, Heart, Skill, Sword } from './Symbols';
 import { tokenName } from './PlayerPanel';
+import { TokenIcon } from './TokenIcon';
 
 // What everyone can see during an AI turn: played cards and resources, not the hand
 export function BotPanel({ state, level, paused }: { state: GameState; level: Level; paused: boolean }) {
@@ -37,7 +38,7 @@ export function BotPanel({ state, level, paused }: { state: GameState; level: Le
       {bot.tokens.length > 0 && (
         <>
           <h3>{t('tokens')}</h3>
-          <div className="buttons">{bot.tokens.map((t, i) => <span key={i} className="chip">{tokenName(t)}</span>)}</div>
+          <div className="buttons">{bot.tokens.map((tok, i) => <span key={i} className="chip token-chip"><TokenIcon tok={tok} size={24} /> {tokenName(tok)}</span>)}</div>
         </>
       )}
     </section>

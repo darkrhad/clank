@@ -264,6 +264,7 @@ export function dragonAttack(s: GameState, extra = 0) {
   const danger = s.dungeonRow.filter((c) => c && cardDef(c).danger).length;
   let draws = RAGE_TRACK[s.rage] + danger + extra;
   const hits: Record<string, number> = {};
+  const drawn: string[] = []; // every cube drawn, in order: a player id, or 'black' (set aside)
   let black = 0;
   while (draws-- > 0) {
     const total = Object.values(s.bag).reduce((a, b) => a + b, 0);
@@ -275,13 +276,15 @@ export function dragonAttack(s: GameState, extra = 0) {
     // Black cubes and cubes of players out of the dungeon are set aside
     if (!victim || victim.status !== 'playing') {
       black++;
+      drawn.push('black');
       continue;
     }
+    drawn.push(victim.id);
     hits[victim.id] = (hits[victim.id] ?? 0) + 1;
     takeDamage(s, victim, 1);
   }
   const summary = Object.entries(hits).map(([id, n]) => `${s.players.find((p) => p.id === id)!.name} (${n})`).join(', ');
-  log(s, 'dragonAttack', { damage: summary, black });
+  log(s, 'dragonAttack', { damage: summary, black, drawn: drawn.join(','), rage: s.rage });
 }
 
 // Puts the next Dungeon card into an empty space of the row and applies its Arrive effect
@@ -371,9 +374,9 @@ function enterRoom(s: GameState, p: Player, to: RoomId) {
   }
 }
 
-function revealSecret(s: GameState, p: Player, id: SecretId) {
+function revealSecret(s: GameState, p: Player, id: SecretId, major: boolean) {
   const secret = SECRETS[id];
-  log(s, 'findsSecret', { player: p.name, secret: id });
+  log(s, 'findsSecret', { player: p.name, secret: id, major });
   s.turn.earned.skill += secret.skill ?? 0;
   gainGold(s, p, secret.gold ?? 0);
   if (secret.draw) drawCards(s, p, secret.draw);
@@ -394,7 +397,7 @@ function takeToken(s: GameState, p: Player, index: number) {
     p.tokens.push(token);
     log(s, 'takesArtifact', { player: p.name, value: token.value });
   } else if (token.kind === 'majorSecret' || token.kind === 'minorSecret') {
-    revealSecret(s, p, token.secret);
+    revealSecret(s, p, token.secret, token.kind === 'majorSecret');
   } else {
     p.tokens.push(token);
     log(s, 'takesToken', { player: p.name, token: token.kind });
@@ -519,7 +522,7 @@ function step(s: GameState, move: Move) {
         } else {
           const { room, index } = options[move.index] ?? fail(msg('pickSecret'));
           const token = s.roomTokens[room].splice(index, 1)[0];
-          if (token.kind === 'majorSecret' || token.kind === 'minorSecret') revealSecret(s, p, token.secret);
+          if (token.kind === 'majorSecret' || token.kind === 'minorSecret') revealSecret(s, p, token.secret, token.kind === 'majorSecret');
         }
         s.pending = null;
       } else fail(msg('pickCard'));

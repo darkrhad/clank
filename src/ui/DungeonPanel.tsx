@@ -1,6 +1,5 @@
 import { CARDS, cardDef } from '../engine/cards';
 import { available, cardCost, placeProblem } from '../engine/engine';
-import { RAGE_TRACK } from '../engine/setup';
 import type { GameState, Move } from '../engine/types';
 import { Card } from './Card';
 import { format, t } from '../i18n';
@@ -40,7 +39,7 @@ export function DungeonPanel({ state, dispatch, readOnly }: Props) {
         })}
       </div>
 
-      <div className="reserve-and-dragon">
+      <div className="reserve">
         <div>
           <h3>{t('reserve')}</h3>
           <div className="cards row">
@@ -57,22 +56,6 @@ export function DungeonPanel({ state, dispatch, readOnly }: Props) {
           </div>
         </div>
 
-        <div className="dragon">
-          <h3>{t('theDragon')}</h3>
-          <div className="rage">
-            {RAGE_TRACK.map((n, i) => (
-              <span key={i} className={i === state.rage ? 'on' : i < state.rage ? 'past' : ''} title={t('rageSpace', { space: i + 1, n })}>{n}</span>
-            ))}
-          </div>
-          <p className="small">
-            {t('clankArea')} {state.players.map((p) => <b key={p.id} className={`c-${p.color}`}>{state.clankArea[p.id]} </b>)}
-            <br />
-            {t('bag')} {t('blackCubes', { n: state.bag.black })}{state.players.map((p) => (state.bag[p.id] ? <b key={p.id} className={`c-${p.color}`}> · {state.bag[p.id]}</b> : null))}
-          </p>
-          {state.countdown && (
-            <p className="countdown">{t('countdown', { n: state.countdown.space })}</p>
-          )}
-        </div>
       </div>
     </section>
   );

@@ -1,0 +1,191 @@
+// Music and sound effects, made in the browser with the Web Audio API: no
+// recordings, so nothing to license. The music is a slow plucked-zither tune
+// in a Vietnamese pentatonic scale, with notes that glide up like the đàn bầu,
+// over a low drone and a soft gong. Effects are short synthesized sounds.
+// Browsers only allow sound after a click: unlock() is called on the first one.
+
+type Sfx = 'card' | 'coin' | 'clank' | 'sword' | 'step' | 'hit' | 'dragon' | 'chime' | 'artifact' | 'turn' | 'escape' | 'down' | 'nope';
+
+const KEY = 'audio';
+let settings = { music: true, sfx: true };
+try { settings = { ...settings, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }; } catch { /* defaults */ }
+
+let ctx: AudioContext | null = null;
+let musicBus: GainNode, sfxBus: GainNode, reverb: ConvolverNode;
+const listeners = new Set<() => void>();
+
+export const getAudio = () => settings;
+export function subscribeAudio(f: () => void) { listeners.add(f); return () => { listeners.delete(f); }; }
+
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch { /* ignore */ }
+  listeners.forEach((f) => f());
+}
+
+export function setMusic(on: boolean) {
+  settings = { ...settings, music: on };
+  save();
+  if (on) { unlock(); startMusic(); } else stopMusic();
+}
+
+export function setSfx(on: boolean) {
+  settings = { ...settings, sfx: on };
+  save();
+  if (on) unlock();
+}
+
+// A soft room reverb from a decaying noise burst
+function makeReverb(c: AudioContext) {
+  const len = c.sampleRate * 2.6;
+  const buf = c.createBuffer(2, len, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+  }
+  const r = c.createConvolver();
+  r.buffer = buf;
+  return r;
+}
+
+export function unlock() {
+  if (!ctx) {
+    ctx = new AudioContext();
+    const master = ctx.createGain(); master.gain.value = 0.8; master.connect(ctx.destination);
+    reverb = makeReverb(ctx);
+    const wet = ctx.createGain(); wet.gain.value = 0.35; reverb.connect(wet).connect(master);
+    musicBus = ctx.createGain(); musicBus.gain.value = 0.45; musicBus.connect(master); musicBus.connect(reverb);
+    sfxBus = ctx.createGain(); sfxBus.gain.value = 0.7; sfxBus.connect(master); sfxBus.connect(reverb);
+  }
+  if (ctx.state === 'suspended') void ctx.resume();
+  if (settings.music) startMusic();
+}
+
+// ---------- building blocks ----------
+
+function env(g: GainNode, t: number, peak: number, attack: number, decay: number) {
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
+}
+
+function tone(freq: number, t: number, opts: { type?: OscillatorType; peak?: number; attack?: number; decay?: number; glide?: number; dest?: AudioNode } = {}) {
+  const c = ctx!;
+  const o = c.createOscillator(); const g = c.createGain();
+  o.type = opts.type ?? 'sine';
+  o.frequency.setValueAtTime(freq, t);
+  if (opts.glide) o.frequency.linearRampToValueAtTime(freq * opts.glide, t + (opts.decay ?? 0.5) * 0.6);
+  env(g, t, opts.peak ?? 0.3, opts.attack ?? 0.005, opts.decay ?? 0.5);
+  o.connect(g).connect(opts.dest ?? sfxBus);
+  o.start(t); o.stop(t + (opts.attack ?? 0.005) + (opts.decay ?? 0.5) + 0.05);
+}
+
+function noise(t: number, dur: number, opts: { type?: BiquadFilterType; freq?: number; q?: number; peak?: number; dest?: AudioNode } = {}) {
+  const c = ctx!;
+  const buf = c.createBuffer(1, Math.max(1, Math.floor(c.sampleRate * dur)), c.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = c.createBufferSource(); src.buffer = buf;
+  const f = c.createBiquadFilter(); f.type = opts.type ?? 'bandpass'; f.frequency.value = opts.freq ?? 2000; f.Q.value = opts.q ?? 1;
+  const g = c.createGain(); env(g, t, opts.peak ?? 0.3, 0.003, dur);
+  src.connect(f).connect(g).connect(opts.dest ?? sfxBus);
+  src.start(t); src.stop(t + dur + 0.05);
+}
+
+// A plucked zither string: a bright attack, a slow fade, an optional upward glide (đàn bầu)
+function pluck(freq: number, t: number, peak = 0.22, glide = 1, dest: AudioNode = musicBus) {
+  tone(freq, t, { type: 'triangle', peak, attack: 0.004, decay: 1.8, glide, dest });
+  tone(freq * 2, t, { type: 'sine', peak: peak * 0.35, attack: 0.002, decay: 0.6, glide, dest });
+  tone(freq * 3.01, t, { type: 'sine', peak: peak * 0.12, attack: 0.002, decay: 0.25, dest });
+}
+
+// A temple gong: low inharmonic partials with a long fade
+function gong(t: number, base = 98, peak = 0.35, dest: AudioNode = sfxBus) {
+  [1, 1.47, 2.09, 2.76, 3.9].forEach((m, i) => tone(base * m, t, { peak: peak / (i + 1.4), attack: 0.01, decay: 4.5 - i * 0.6, dest }));
+}
+
+// ---------- music ----------
+
+// D minor pentatonic (D F G A C) over two octaves: a dark, old sound
+const SCALE = [146.83, 174.61, 196.0, 220.0, 261.63, 293.66, 349.23, 392.0, 440.0, 523.25];
+const BEAT = 60 / 66; // a slow pulse
+let musicTimer: number | null = null;
+let nextBeat = 0, beat = 0, pos = 4, drone: { o: OscillatorNode; g: GainNode } | null = null;
+
+function startMusic() {
+  if (!ctx || musicTimer !== null || ctx.state !== 'running' && ctx.state !== 'suspended') return;
+  nextBeat = ctx.currentTime + 0.3;
+  // A low drone on D that slowly breathes
+  const o = ctx.createOscillator(); const g = ctx.createGain();
+  o.type = 'sine'; o.frequency.value = 73.42;
+  g.gain.setValueAtTime(0.0001, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.06, ctx.currentTime + 4);
+  const lfo = ctx.createOscillator(); const lfoGain = ctx.createGain();
+  lfo.frequency.value = 0.07; lfoGain.gain.value = 0.025; lfo.connect(lfoGain).connect(g.gain); lfo.start();
+  o.connect(g).connect(musicBus); o.start();
+  drone = { o, g };
+  musicTimer = window.setInterval(scheduleMusic, 120);
+}
+
+function stopMusic() {
+  if (musicTimer !== null) { clearInterval(musicTimer); musicTimer = null; }
+  if (drone && ctx) {
+    drone.g.gain.cancelScheduledValues(ctx.currentTime);
+    drone.g.gain.setValueAtTime(drone.g.gain.value, ctx.currentTime);
+    drone.g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.5);
+    drone.o.stop(ctx.currentTime + 1.6);
+    drone = null;
+  }
+}
+
+// Plans the notes a little ahead: a wandering melody in short phrases with
+// rests, some notes gliding up, a soft gong every 16 beats
+function scheduleMusic() {
+  if (!ctx) return;
+  while (nextBeat < ctx.currentTime + 0.6) {
+    const inPhrase = beat % 8 < 5;
+    if (inPhrase && Math.random() < 0.72) {
+      pos = Math.max(0, Math.min(SCALE.length - 1, pos + [-2, -1, -1, 0, 1, 1, 2][Math.floor(Math.random() * 7)]));
+      const glide = Math.random() < 0.28 ? 1.06 : 1; // đàn bầu bend up a semitone
+      pluck(SCALE[pos], nextBeat, 0.16 + Math.random() * 0.06, glide);
+      if (Math.random() < 0.18) pluck(SCALE[pos], nextBeat + BEAT / 2, 0.1); // a soft echo
+    }
+    if (beat % 8 === 0) pluck(SCALE[0] / 2, nextBeat, 0.12); // a low root note at the start of a phrase
+    if (beat % 16 === 0 && beat > 0) gong(nextBeat, 73.42, 0.12, musicBus);
+    nextBeat += BEAT;
+    beat++;
+  }
+}
+
+// ---------- effects ----------
+
+const last: Partial<Record<Sfx, number>> = {};
+
+export function play(name: Sfx, delay = 0) {
+  if (!settings.sfx || !ctx || ctx.state !== 'running') return;
+  const t = ctx.currentTime + delay;
+  if ((last[name] ?? -1) > t - 0.09) return; // the same sound many times at once sounds like noise
+  last[name] = t;
+  switch (name) {
+    case 'card': noise(t, 0.07, { type: 'highpass', freq: 3500, peak: 0.12 }); pluck(587.33, t, 0.06, 1, sfxBus); break;
+    case 'coin': tone(1760, t, { peak: 0.12, decay: 0.25 }); tone(2637, t + 0.06, { peak: 0.1, decay: 0.3 }); break;
+    case 'clank': [520, 760, 1130, 1590, 2210].forEach((f, i) => tone(f * (0.97 + Math.random() * 0.06), t + i * 0.012, { type: 'square', peak: 0.035, decay: 0.22 })); noise(t, 0.12, { freq: 3000, q: 3, peak: 0.12 }); break;
+    case 'sword': noise(t, 0.18, { freq: 4500, q: 2, peak: 0.22 }); tone(1320, t, { type: 'triangle', peak: 0.08, decay: 0.35, glide: 0.92 }); break;
+    case 'step': noise(t, 0.08, { type: 'lowpass', freq: 380, peak: 0.3 }); noise(t + 0.22, 0.08, { type: 'lowpass', freq: 340, peak: 0.25 }); break;
+    case 'hit': noise(t, 0.2, { type: 'lowpass', freq: 600, peak: 0.35 }); tone(110, t, { peak: 0.2, decay: 0.3, glide: 0.7 }); break;
+    case 'dragon': gong(t, 65.4, 0.45); noise(t, 1.6, { type: 'lowpass', freq: 160, q: 4, peak: 0.35 }); tone(55, t + 0.1, { type: 'sawtooth', peak: 0.06, attack: 0.3, decay: 1.4, glide: 0.8 }); break;
+    case 'chime': [880, 1174.66, 1396.91].forEach((f, i) => tone(f, t + i * 0.09, { peak: 0.09, decay: 0.9 })); break;
+    case 'artifact': [587.33, 698.46, 880, 1046.5, 1174.66].forEach((f, i) => pluck(f, t + i * 0.1, 0.12, 1, sfxBus)); tone(2349, t + 0.5, { peak: 0.06, decay: 1.5 }); break;
+    case 'turn': tone(1174.66, t, { peak: 0.06, decay: 0.7 }); break;
+    case 'escape': [293.66, 392, 440, 587.33, 783.99, 880].forEach((f, i) => pluck(f, t + i * 0.12, 0.13, 1, sfxBus)); gong(t + 0.75, 146.83, 0.18); break;
+    case 'down': gong(t, 55, 0.4); [440, 392, 349.23, 293.66].forEach((f, i) => pluck(f, t + i * 0.18, 0.1, 0.97, sfxBus)); break;
+    case 'nope': tone(196, t, { type: 'triangle', peak: 0.1, decay: 0.15 }); break;
+  }
+}
+
+// Which sound goes with which game log message (see i18n en.ts)
+export const LOG_SOUND: Partial<Record<string, Sfx>> = {
+  acquires: 'card', buys: 'coin', defeats: 'sword', movesInto: 'step', teleports: 'chime', tunnelDamage: 'hit',
+  dragonAttack: 'dragon', countdownSpace: 'dragon', takesArtifact: 'artifact', findsSecret: 'chime', takesToken: 'chime',
+  fountainHeal: 'chime', healsCard: 'chime', escapes: 'escape', rescued: 'down', lostDepths: 'down', lostNoArtifact: 'down',
+  countdownEnd: 'down', gameOver: 'down', turn: 'turn', uses: 'coin', usesSecret: 'chime', trashes: 'card', discardsDraws: 'card',
+};

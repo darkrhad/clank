@@ -48,6 +48,9 @@ button.primary { background: #8a5a12; border-color: var(--accent); font-weight: 
 .setup-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
 .head-buttons { display: flex; gap: 8px; align-items: center; }
+.audio-buttons { display: inline-flex; gap: 4px; }
+.audio-buttons button { padding: 4px 8px; font-size: 13px; opacity: .45; }
+.audio-buttons button.on { opacity: 1; border-color: #8a6a2e; }
 /* Rules window: scrolls inside, readable line length */
 .modal.rules { max-width: 640px; max-height: 85vh; overflow-y: auto; z-index: 60; }
 .rules-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; position: sticky; top: -18px; padding: 6px 0; background: inherit; }
@@ -57,9 +60,76 @@ button.primary { background: #8a5a12; border-color: var(--accent); font-weight: 
 .rules .sym-sword, .rules .sym-boot { width: 16px; height: 16px; } .rules .sym-gold { width: 18px; height: 18px; font-size: 10px; }
 .rules .sym-points { width: 20px; height: 18px; font-size: 10px; } .rules .sym-heart { width: 14px; height: 14px; }
 
+/* Left column: the board with the dragon panel under it */
+.left { display: grid; gap: 12px; min-width: 0; }
+
+/* Dragon panel (under the board) */
+.dragon-panel { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: 'rage rage' 'area bag'; gap: 12px 20px; align-items: start; }
+.dp-rage { grid-area: rage; display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: flex-end; }
+.dp-rage .dp-countdown { margin-top: 0; }
+.dp-area { grid-area: area; } .dp-bag { grid-area: bag; }
+@media (max-width: 700px) { .dragon-panel { grid-template-columns: 1fr; grid-template-areas: 'rage' 'area' 'bag'; } }
+.dragon-panel h3 { margin-top: 0; }
+.rage-track { display: flex; gap: 6px; flex-wrap: nowrap; margin-top: 6px; }
+.rage-space { position: relative; width: 44px; height: 44px; border-radius: 8px; display: grid; place-items: center; border: 1px solid #5c4626; background: rgba(0,0,0,.35); }
+.rage-space b { font-size: 16px; color: #e8dcc0; }
+.rage-space.past { opacity: .35; }
+.rage-space.on { border: 2px solid #ffb52a; background: rgba(150, 30, 20, .55); box-shadow: 0 0 12px rgba(255, 140, 40, .55); }
+.rage-space.on img, .rage-space.on > span { position: absolute; width: 34px; height: 34px; top: -16px; right: -12px; font-size: 24px; filter: drop-shadow(0 2px 3px #000); }
+.rage-space.count.on { background: rgba(120, 10, 10, .7); }
+.dp-countdown { margin-top: 10px; }
+.dp-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.dp-name { min-width: 76px; font-weight: 700; font-size: 12px; }
+.cubes { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+.cubes.bag { max-height: 120px; overflow: hidden; }
+.cube-sq { width: 13px; height: 13px; border-radius: 3px; border: 1px solid rgba(0,0,0,.7); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); display: inline-block; }
+.cube-sq.big { width: 34px; height: 34px; border-radius: 6px; border: 2px solid rgba(0,0,0,.8); }
+
+/* Dragon attack: shake, red flash, cubes drawn one by one */
+@keyframes shake { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-6px, 3px); } 40% { transform: translate(5px, -4px); } 60% { transform: translate(-4px, -2px); } 80% { transform: translate(3px, 4px); } }
+.game.shake main { animation: shake .45s ease-in-out 3; }
+@keyframes flash { 0% { opacity: 0; } 15% { opacity: .75; } 100% { opacity: 0; } }
+.dragon-attack { z-index: 50; background: rgba(40, 0, 0, .55); }
+.da-flash { position: fixed; inset: 0; background: radial-gradient(circle, rgba(255, 120, 40, .7), rgba(140, 0, 0, .8)); animation: flash 1.2s ease-out forwards; pointer-events: none; }
+@keyframes rise { from { transform: scale(.4) translateY(40px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+.da-box { position: relative; text-align: center; padding: 22px 30px; max-width: 520px; border-radius: 14px; border: 2px solid #ffb52a;
+  background: linear-gradient(rgba(30, 8, 6, .95), rgba(20, 6, 5, .95)); box-shadow: 0 0 60px rgba(255, 90, 30, .6); animation: rise .5s ease-out; }
+.da-dragon { width: 140px; height: 140px; margin: -90px auto 6px; display: block; font-size: 110px; filter: drop-shadow(0 0 18px #ff7a1a); }
+.da-box h2 { font-size: 30px; letter-spacing: .06em; color: #ffcf6a; text-shadow: 0 0 12px #ff5a1a; margin: 0 0 4px; }
+.da-cubes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; min-height: 42px; margin: 12px 0; }
+@keyframes pop { from { transform: scale(0) rotate(-40deg); } 70% { transform: scale(1.25); } to { transform: scale(1); } }
+.da-cubes .hidden { visibility: hidden; }
+.da-cubes .out { animation: pop .35s ease-out; }
+.da-damage p { margin: 4px 0; font-size: 17px; font-weight: 700; }
+
+/* "You found …" */
+@keyframes slideIn { from { transform: translate(-50%, 30px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+.found { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); z-index: 45; display: flex; gap: 14px; align-items: center; cursor: pointer;
+  max-width: 460px; padding: 14px 18px; border-radius: 12px; border: 1px solid #c9a24a; background: linear-gradient(rgba(30, 22, 14, .97), rgba(22, 16, 10, .97));
+  box-shadow: 0 10px 40px rgba(0,0,0,.6), 0 0 24px rgba(231, 181, 74, .25); animation: slideIn .35s ease-out; }
+.found h3 { margin: 2px 0; color: var(--accent); font-size: 17px; }
+.found p { margin: 2px 0; }
+.found small { color: var(--muted); }
+
+/* Token pictures */
+.token-icon { position: relative; display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: #120f0c; border: 1.5px solid #c9a24a; overflow: visible; vertical-align: middle; }
+.token-icon img { width: 100%; height: 100%; border-radius: 50%; }
+.token-icon b { position: absolute; right: -6px; bottom: -4px; font: 800 11px system-ui; color: #fff4d6; background: #120f0c; border: 1px solid #c9a24a; border-radius: 9px; padding: 0 4px; }
+.token-chip { display: inline-flex !important; align-items: center; gap: 6px; }
+/* Your tokens: picture, name, what it does, and Use for potions */
+.token-list { display: grid; gap: 6px; }
+.token-item { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; background: rgba(0,0,0,.25); border: 1px solid rgba(201, 162, 74, .3); }
+.token-info { flex: 1; display: grid; line-height: 1.25; }
+.token-info small { color: var(--muted); }
+.token-item button { flex: none; padding: 4px 14px; }
+.token-info .need { color: #ff9a7a; }
+.deck-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.discard-btn { font-size: 12px; padding: 4px 10px; }
+.toast.info { background: #2c2416; border-color: #8a6a2e; bottom: 24px; max-width: 520px; text-align: center; }
+
 /* Layout */
 .game { padding: 10px 12px 24px; }
-.topbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+.topbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; position: relative; z-index: 30; } /* above dialogs, so sound and language stay switchable */
 .topbar .players { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; }
 .player-chip { display: flex; gap: 8px; align-items: center; padding: 4px 10px; border-radius: 8px; font-size: 12px; }
 .player-chip { border-left: 4px solid var(--pc); }

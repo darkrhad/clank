@@ -6,6 +6,7 @@ import { MARKET_PRICE, MAX_HEALTH } from '../engine/setup';
 import type { GameState, Move, Token } from '../engine/types';
 import { Card } from './Card';
 import { Boot, Gold, Heart, Skill, Sword } from './Symbols';
+import { TokenIcon } from './TokenIcon';
 
 // A token's name in the current language, e.g. "Crown (9)"
 export function tokenName(tok: Token): string {
@@ -18,9 +19,10 @@ interface Props {
   dispatch: (move: Move) => void;
   canUndo: boolean;
   onUndo: () => void;
+  onShowDiscard: () => void;
 }
 
-export function PlayerPanel({ state, dispatch, canUndo, onUndo }: Props) {
+export function PlayerPanel({ state, dispatch, canUndo, onUndo, onShowDiscard }: Props) {
   const me = currentPlayer(state);
   const left = available(state);
   const room = ROOMS[me.room];
@@ -67,7 +69,7 @@ export function PlayerPanel({ state, dispatch, canUndo, onUndo }: Props) {
           <div className="buttons">
             {roomTokens.map((tok, i) => (
               <button key={i} disabled={!state.turn.canTakeToken} onClick={() => dispatch({ type: 'takeToken', index: i })}>
-                {t('take', { token: tokenName(tok) })}
+                <TokenIcon tok={tok} size={22} /> {t('take', { token: tokenName(tok) })}
               </button>
             ))}
           </div>
@@ -80,16 +82,29 @@ export function PlayerPanel({ state, dispatch, canUndo, onUndo }: Props) {
       {room.type === 'market' && (
         <>
           <h3>{t('market')} <small>{t('goldEach', { n: MARKET_PRICE })}</small></h3>
-          <div className="buttons">
-            <button disabled={me.gold < MARKET_PRICE || !state.market.masterKey} onClick={() => dispatch({ type: 'buyMarket', item: 'masterKey' })}>
-              {t('masterKey')} ({state.market.masterKey})
-            </button>
-            <button disabled={me.gold < MARKET_PRICE || !state.market.backpack} onClick={() => dispatch({ type: 'buyMarket', item: 'backpack' })}>
-              {t('backpack')} ({state.market.backpack})
-            </button>
-            <button disabled={me.gold < MARKET_PRICE || !state.market.crowns.length} onClick={() => dispatch({ type: 'buyMarket', item: 'crown' })}>
-              {t('crown')} {state.market.crowns[0] ? `(${state.market.crowns[0]})` : t('none')}
-            </button>
+          {/* What each item does, how many are left, and Buy (or why you can't yet) */}
+          <div className="token-list">
+            {([
+              { item: 'masterKey', left: state.market.masterKey, what: t('masterKeyWhat') },
+              { item: 'backpack', left: state.market.backpack, what: t('backpackWhat') },
+              { item: 'crown', left: state.market.crowns.length, what: t('crownWhat', { n: state.market.crowns[0] ?? 0 }), value: state.market.crowns[0] },
+            ] as const).map(({ item, left, what, ...rest }) => {
+              const value = 'value' in rest ? rest.value : undefined;
+              const short = me.gold < MARKET_PRICE;
+              return (
+                <div key={item} className="token-item">
+                  <TokenIcon tok={{ kind: item, value }} size={30} />
+                  <div className="token-info">
+                    <b>{t(item)} <small>{t('leftN', { n: left })}</small></b>
+                    <small>{what}</small>
+                    {short && left > 0 && <small className="need">{t('needGold', { n: MARKET_PRICE, have: me.gold })}</small>}
+                  </div>
+                  <button disabled={short || !left || !!state.pending} onClick={() => dispatch({ type: 'buyMarket', item })}>
+                    {left ? t('buyFor', { n: MARKET_PRICE }) : t('soldOut')}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </>
       )}
@@ -97,12 +112,20 @@ export function PlayerPanel({ state, dispatch, canUndo, onUndo }: Props) {
       {me.tokens.length > 0 && (
         <>
           <h3>{t('yourTokens')}</h3>
-          <div className="buttons">
+          {/* Each token with what it does, so you know before using it */}
+          <div className="token-list">
             {me.tokens.map((tok, i) => {
               const usable = tok.kind === 'kept' && (SECRETS[tok.secret].heal || SECRETS[tok.secret].boots || SECRETS[tok.secret].swords);
-              return usable && tok.kind === 'kept'
-                ? <button key={i} onClick={() => dispatch({ type: 'useToken', index: i })} title={secretText(tok.secret)}>{t('use', { token: tokenName(tok) })}</button>
-                : <span key={i} className="chip">{tokenName(tok)}</span>;
+              return (
+                <div key={i} className="token-item">
+                  <TokenIcon tok={tok} size={30} />
+                  <div className="token-info">
+                    <b>{tokenName(tok)}</b>
+                    {tok.kind === 'kept' && <small>{secretText(tok.secret)}</small>}
+                  </div>
+                  {usable && <button onClick={() => dispatch({ type: 'useToken', index: i })} disabled={!!state.pending}>{t('useBtn')}</button>}
+                </div>
+              );
             })}
           </div>
         </>
@@ -115,8 +138,9 @@ export function PlayerPanel({ state, dispatch, canUndo, onUndo }: Props) {
           {t('endTurn')}
         </button>
       </div>
-      <p className="muted small">
-        {t('deckDiscard', { deck: me.deck.length, discard: me.discard.length })}
+      <p className="muted small deck-line">
+        {t('deckFaceDown', { n: me.deck.length })}
+        <button className="discard-btn" onClick={onShowDiscard}>{t('discardBtn', { n: me.discard.length })}</button>
       </p>
     </section>
   );

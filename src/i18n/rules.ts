@@ -41,7 +41,8 @@ const EN: RuleSection[] = [
   { title: 'Health and escaping', items: [
     'You have 10 health. At 10 damage you are knocked out.',
     'Knocked out above ground with a Treasure: the villagers rescue you and you still score. Knocked out in the Depths, or without a Treasure: you lose.',
-    'Leave the citadel with a Treasure and you escape, plus a Mastery badge worth {points:20}.',
+    'To escape, walk out through the entrance gate (top left of the board) while carrying a Treasure.',
+    'Only escaping earns the Mastery badge, worth {points:20}. Being rescued does not.',
     'The first player out starts the countdown: each round the dragon attacks harder, and on the fifth space everyone still inside is knocked out.',
   ] },
   { title: 'Scoring', items: [
@@ -85,7 +86,8 @@ const VI: RuleSection[] = [
   { title: 'Máu và thoát ra', items: [
     'Bạn có 10 máu. Nhận đủ 10 sát thương là bị hạ gục.',
     'Bị hạ gục trên mặt đất khi có Bảo vật: dân làng cứu bạn và bạn vẫn được tính điểm. Bị hạ gục ở Tầng sâu, hoặc khi chưa có Bảo vật: bạn thua.',
-    'Ra khỏi kinh thành cùng Bảo vật là thoát, kèm Huy hiệu Bậc thầy đáng {points:20}.',
+    'Muốn thoát, hãy đi ra qua cổng vào (góc trên bên trái bàn chơi) khi đang mang Bảo vật.',
+    'Chỉ khi tự thoát ra mới được Huy hiệu Bậc thầy, đáng {points:20}. Được dân làng cứu thì không có.',
     'Người ra đầu tiên bắt đầu đếm ngược: mỗi vòng rồng tấn công mạnh hơn, đến ô thứ năm thì ai còn bên trong đều bị hạ gục.',
   ] },
   { title: 'Tính điểm', items: [

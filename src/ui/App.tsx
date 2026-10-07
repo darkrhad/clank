@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { getAudio, LOG_SOUND, play, setMusic, setSfx, subscribeAudio, unlock } from './audio';
 import { chooseMove, LEVELS, type Level } from '../ai/bot';
 import { applyMove, available, currentPlayer, RuleError, skipMove, type MoveOption } from '../engine/engine';
 import { finalScores } from '../engine/scoring';
@@ -9,9 +10,13 @@ import { BotPanel } from './BotPanel';
 import { DungeonPanel } from './DungeonPanel';
 import { PendingDialog } from './PendingDialog';
 import { RulesDialog } from './Rules';
+import { DragonPanel } from './DragonPanel';
+import { DiscardDialog, DragonAttack, FoundReveal, type Found } from './Overlays';
+import { SECRETS } from '../engine/secrets';
+import type { SecretId, Token } from '../engine/types';
 import { Gold, Heart } from './Symbols';
 import { PlayerPanel, tokenName } from './PlayerPanel';
-import { format, LANGS, roomName, setLang, t, type Key, type Msg } from '../i18n';
+import { cardName, format, LANGS, roomName, secretName, secretText, setLang, t, type Key, type Msg } from '../i18n';
 import { useLang } from './useLang';
 
 const status = (s: GameState['players'][number]['status']) => t(`status.${s}` as Key);
@@ -25,6 +30,17 @@ type Speed = keyof typeof SPEEDS;
 
 const levelName = (l: Level) => t(`level.${l}` as Key);
 const controllerLabel = (c: Controller) => (c === 'human' ? '' : `🤖 ${levelName(c)}`);
+
+// Music and effects on/off (remembered)
+export function AudioButtons() {
+  const a = useSyncExternalStore(subscribeAudio, getAudio, getAudio);
+  return (
+    <div className="audio-buttons">
+      <button className={a.music ? 'on' : ''} aria-pressed={a.music} title={t('musicTitle')} onClick={() => setMusic(!a.music)}>♪</button>
+      <button className={a.sfx ? 'on' : ''} aria-pressed={a.sfx} title={t('sfxTitle')} onClick={() => setSfx(!a.sfx)}>🔔</button>
+    </div>
+  );
+}
 
 // EN | VI: switches every text at once, also in the middle of a game
 export function LangSwitch() {
@@ -55,7 +71,7 @@ function Setup({ onStart }: { onStart: (names: string[], controllers: Controller
     <div className="setup">
       <div className="setup-head">
         <h1>Loảng xoảng! <small>demo</small></h1>
-        <div className="head-buttons"><button onClick={() => setRules(true)}>{t('rules')}</button><LangSwitch /></div>
+        <div className="head-buttons"><button onClick={() => setRules(true)}>{t('rules')}</button><AudioButtons /><LangSwitch /></div>
       </div>
       <p>{t('subtitle')}</p>
       {seats.map((seat, i) => (
@@ -126,6 +142,10 @@ export default function App() {
   const [paused, setPaused] = useState(false);
   const [speed, setSpeed] = useState<Speed>('normal');
   const [rules, setRules] = useState(false);
+  const [dragonShow, setDragonShow] = useState<Msg | null>(null); // the dragon attack being shown
+  const [found, setFound] = useState<Found[]>([]); // "you found …" popups, one after another
+  const [notice, setNotice] = useState<string | null>(null); // short info line, e.g. where a bought card went
+  const [showDiscard, setShowDiscard] = useState(false);
 
   useEffect(() => {
     if (!error) return;
@@ -133,12 +153,67 @@ export default function App() {
     return () => clearTimeout(t);
   }, [error]);
 
+  // Browsers only allow sound after a click: start the audio on the first one
+  useEffect(() => {
+    const first = () => unlock();
+    window.addEventListener('pointerdown', first, { once: true });
+    return () => window.removeEventListener('pointerdown', first);
+  }, []);
+
+  // Sounds for what just happened: new log lines, cards played, new Loảng xoảng! cubes
+  const prev = useRef<GameState | null>(null);
+  useEffect(() => {
+    const before = prev.current;
+    prev.current = state;
+    if (!state || !before || before.players.length !== state.players.length) return;
+    const fresh = state.log.slice(before.log.length);
+    fresh.slice(-3).forEach((m, i) => { const s = LOG_SOUND[m.k]; if (s) play(s, i * 0.12); });
+
+    // What people (not the AI) should see: the dragon attack, what they found, where a bought card went
+    const human = (name: unknown) => {
+      const i = state.players.findIndex((p) => p.name === name);
+      return i >= 0 && controllers[i] === 'human';
+    };
+    const finds: Found[] = [];
+    for (const m of fresh) {
+      const p = m.p ?? {};
+      if (m.k === 'dragonAttack') setDragonShow(m);
+      if (!human(p.player)) continue;
+      const by = String(p.player), mine = true;
+      if (m.k === 'findsSecret') {
+        const id = p.secret as SecretId, keep = SECRETS[id].keep;
+        finds.push({ by, mine, tok: { kind: keep ? 'kept' : p.major ? 'majorSecret' : 'minorSecret', secret: id }, name: secretName(id), text: secretText(id), note: keep ? t('keptNote') : undefined });
+      } else if (m.k === 'takesArtifact') {
+        finds.push({ by, mine, tok: { kind: 'artifact', value: Number(p.value) }, name: t('token.artifact', { value: p.value }) });
+      } else if (m.k === 'takesToken' || m.k === 'buys') {
+        const kind = String(p.token ?? p.item) as Token['kind'];
+        finds.push({ by, mine, tok: { kind }, name: kind === 'idol' ? t('tokenName.idol') : t(`${kind}` as Key) });
+      } else if (m.k === 'escapes') {
+        finds.push({ by, mine, tok: { kind: 'mastery' }, name: t('token.mastery'), note: t('masteryNote') });
+      } else if (m.k === 'acquires') {
+        setNotice(t('toDiscard', { card: cardName(String(p.card)) }));
+      }
+    }
+    if (finds.length) setFound((q) => [...q, ...finds]);
+    const played = state.players.reduce((n, p) => n + p.playArea.length, 0) - before.players.reduce((n, p) => n + p.playArea.length, 0);
+    if (played > 0) play('card');
+    const cubes = (g: GameState) => Object.values(g.clankArea).reduce((a, b) => a + b, 0);
+    if (cubes(state) > cubes(before)) play('clank', 0.05);
+  }, [state]);
+
+  useEffect(() => { if (error) play('nope'); }, [error]);
+  useEffect(() => {
+    if (!notice) return;
+    const x = setTimeout(() => setNotice(null), 3500);
+    return () => clearTimeout(x);
+  }, [notice]);
+
   const controller = state ? controllers[state.current] : 'human';
   const botTurn = !!state && !state.over && controller !== 'human';
 
   // AI turns: one move at a time, with a pause so people can follow
   useEffect(() => {
-    if (!state || !botTurn || paused) return;
+    if (!state || !botTurn || paused || dragonShow) return; // wait while the dragon attack is shown
     const t = setTimeout(() => {
       const level = controller as Level;
       try {
@@ -152,7 +227,7 @@ export default function App() {
       setHistory([]);
     }, SPEEDS[speed]);
     return () => clearTimeout(t);
-  }, [state, botTurn, paused, speed, controller]);
+  }, [state, botTurn, paused, speed, controller, dragonShow]);
 
   const dispatch = (move: Move) => {
     if (!state || botTurn) return;
@@ -202,7 +277,7 @@ export default function App() {
   };
 
   return (
-    <div className="game">
+    <div className={`game${dragonShow ? ' shake' : ''}`}>
       <header className="topbar">
         <h1>Loảng xoảng! <small>demo</small></h1>
         <div className="players">
@@ -229,17 +304,21 @@ export default function App() {
           </div>
         )}
         <button onClick={() => setRules(true)}>{t('rules')}</button>
+        <AudioButtons />
         <LangSwitch />
         <button onClick={() => { if (confirm(t('quitConfirm'))) setState(null); }}>{t('quit')}</button>
       </header>
 
       <main>
-        <Board
-          state={state}
-          interactive={!botTurn}
-          onMove={onMove}
-          onTeleport={(room) => dispatch({ type: 'move', to: room, teleport: true })}
-        />
+        <div className="left">
+          <Board
+            state={state}
+            interactive={!botTurn}
+            onMove={onMove}
+            onTeleport={(room) => dispatch({ type: 'move', to: room, teleport: true })}
+          />
+          <DragonPanel state={state} />
+        </div>
         <div className="side">
           {botTurn ? (
             <BotPanel state={state} level={controller as Level} paused={paused} />
@@ -250,7 +329,7 @@ export default function App() {
               <button className="primary" onClick={() => setShownTo(state.current)}>{t('showHand')}</button>
             </section>
           ) : (
-            <PlayerPanel state={state} dispatch={dispatch} canUndo={history.length > 0} onUndo={undo} />
+            <PlayerPanel state={state} dispatch={dispatch} canUndo={history.length > 0} onUndo={undo} onShowDiscard={() => setShowDiscard(true)} />
           )}
           <section className="panel log">
             <h3>{t('logTitle')}</h3>
@@ -283,6 +362,10 @@ export default function App() {
       {state.pending && !handHidden && !botTurn && <PendingDialog state={state} dispatch={dispatch} />}
 
       {rules && <RulesDialog onClose={() => setRules(false)} />}
+      {showDiscard && <DiscardDialog state={state} onClose={() => setShowDiscard(false)} />}
+      {notice && <div className="toast info" onClick={() => setNotice(null)}>{notice}</div>}
+      {found[0] && <FoundReveal key={found.length} found={found[0]} onDone={() => setFound((q) => q.slice(1))} />}
+      {dragonShow && <DragonAttack attack={dragonShow} state={state} onDone={() => setDragonShow(null)} />}
 
       {state.over && <GameOver state={state} controllers={controllers} onRestart={() => setState(null)} />}
     </div>
