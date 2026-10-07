@@ -100,6 +100,7 @@ function Setup({ onStart }: { onStart: (names: string[], controllers: Controller
         <li><b>{levelName('hard')}</b>: {t('levelHardDesc')}</li>
       </ul>
       <p className="muted small">{t('demoNote')}</p>
+      <p className="credits">Made by ama coffee studio ☕️🇻🇳 🇷🇸</p>
     </div>
     {/* Outside the panel: its backdrop blur would trap the full-screen window inside it */}
     {rules && <RulesDialog onClose={() => setRules(false)} />}
