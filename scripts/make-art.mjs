@@ -9,6 +9,8 @@
 //            --style "..."  try another style block (instead of the one in PROMPTS.md)
 //            --negative "…" extra things to avoid, added to the negative prompt
 //            --tag hand     a trial: saved as art-review/<id>-hand-1.jpg …, never put in the game
+//            --set vi       another art set: prompts from src/ui/art/vi/PROMPTS.md, art saved
+//                           in src/ui/art/vi/ and art-review/vi/
 //
 // Prompts come from src/ui/art/PROMPTS.md (style block + one line per card).
 // Every version is saved in art-review/ (<id>-1.jpg, <id>-2.jpg …); version 1
@@ -23,8 +25,11 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFi
 import { join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const ART = join(ROOT, 'src/ui/art');
-const REVIEW = join(ROOT, 'art-review');
+const args = process.argv.slice(2);
+const setAt = args.indexOf('--set');
+const set = setAt >= 0 ? args.splice(setAt, 2)[1] : '';
+const ART = join(ROOT, 'src/ui/art', set);
+const REVIEW = join(ROOT, 'art-review', set);
 const API = process.env.DRAW_THINGS_URL ?? 'http://127.0.0.1:7860';
 
 const START = ['burgle', 'stumble', 'sidestep', 'scramble', 'mercenary', 'explore', 'secretTome', 'goblin'];
@@ -40,7 +45,6 @@ const subjects = Object.fromEntries([...md.matchAll(/^\| `(\w+)` \| (.+?) \|$/gm
 if (!style || !Object.keys(subjects).length) throw new Error('Could not read the style block or card prompts from PROMPTS.md');
 
 // ---------- arguments ----------
-const args = process.argv.slice(2);
 const option = (name, fallback) => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 ? args.splice(i, 2)[1] : fallback;

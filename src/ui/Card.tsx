@@ -1,6 +1,6 @@
 import { Fragment, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { cardDef, CARDS, type CardDef } from '../engine/cards';
-import { ART } from './art';
+import { artFor } from './art';
 import { cardName, cardText, getLang, t, type Key } from '../i18n';
 import { Boot, CompanionIcon, EffectLine, Gold, Points, RichText, Skill, Sword } from './Symbols';
 
@@ -97,6 +97,7 @@ function Name({ name }: { name: string }) {
 export function Card({ uid, id, onClick, disabled, small, children, cost }: Props) {
   const d = uid ? cardDef(uid) : CARDS[id!];
   const lang = getLang();
+  const art = artFor(d.id, lang);
   const name = cardName(d.id);
   const strip = d.danger ? [t('danger'), t('dangerText')]
     : d.arrive?.allPlayersClank ? [t('arrive'), t('arriveClank', { n: d.arrive.allPlayersClank })]
@@ -116,7 +117,7 @@ export function Card({ uid, id, onClick, disabled, small, children, cost }: Prop
           {d.points || d.bonus ? <Points n={d.points || '?'} /> : null}
         </div>
 
-        <div className={`c-art${ART[d.id] ? ' has-art' : ''}`} style={ART[d.id] ? { backgroundImage: `url(${ART[d.id]})` } : undefined}>
+        <div className={`c-art${art ? ' has-art' : ''}`} style={art ? { backgroundImage: `url(${art})` } : undefined}>
           <LeftColumn d={d} />
           <div className="c-badges">
             {d.arrive && <span className="badge-arrive" title={t('arriveBadge')}>!</span>}
