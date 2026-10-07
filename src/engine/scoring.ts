@@ -6,7 +6,7 @@ export interface Score {
   player: Player;
   lost: boolean;
   total: number;
-  parts: { label: string; points: number }[];
+  parts: { label: 'artifacts' | 'otherTokens' | 'gold' | 'cards'; points: number }[]; // label: a key, see score.* in i18n
   bestArtifact: number;
 }
 
@@ -48,10 +48,10 @@ export function cardPoints(p: Player, uid: string): number {
 export function scorePlayer(p: Player): Score {
   const cards = allCards(p);
   const parts = [
-    { label: 'Artifacts', points: p.tokens.filter((t) => t.kind === 'artifact').reduce((a, t) => a + tokenPoints(t), 0) },
-    { label: 'Other tokens', points: p.tokens.filter((t) => t.kind !== 'artifact').reduce((a, t) => a + tokenPoints(t), 0) },
-    { label: 'Gold', points: p.gold },
-    { label: 'Cards', points: cards.reduce((a, c) => a + cardPoints(p, c), 0) },
+    { label: 'artifacts' as const, points: p.tokens.filter((t) => t.kind === 'artifact').reduce((a, t) => a + tokenPoints(t), 0) },
+    { label: 'otherTokens' as const, points: p.tokens.filter((t) => t.kind !== 'artifact').reduce((a, t) => a + tokenPoints(t), 0) },
+    { label: 'gold' as const, points: p.gold },
+    { label: 'cards' as const, points: cards.reduce((a, c) => a + cardPoints(p, c), 0) },
   ];
   const bestArtifact = Math.max(0, ...p.tokens.map((t) => (t.kind === 'artifact' ? t.value : 0)));
   // Knocked out in the Depths or without an Artifact: no score

@@ -136,7 +136,7 @@ export function createGame(names: string[], seed = Date.now()): GameState {
     rage: 4 - names.length, // 4 players: first space, 3: second, 2: third
     countdown: null,
     pending: null,
-    log: [`${players[0].name} starts.`],
+    log: [{ k: 'starts', p: { player: players[0].name } }],
     over: false,
   };
 }

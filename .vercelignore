@@ -1,0 +1,6 @@
+# Local only, never uploaded (Vercel CLI). Git deploys don't have these anyway (.gitignore).
+assets/
+art-review/
+dist/
+node_modules/
+*.pdf

@@ -3,6 +3,7 @@ import { ROOMS, TUNNELS, type Room, type Tunnel } from '../engine/map';
 import type { GameState, Token } from '../engine/types';
 import boardImage from './parts/board.jpg';
 import { PART_FILES } from './parts';
+import { format, t, t as tr, type Key } from '../i18n';
 
 // The board: a painted background (the citadel above, the catacombs below,
 // no rooms on it) with the rooms and tunnels drawn on top from map.ts.
@@ -15,9 +16,6 @@ const SIZE = { w: 907, h: 905 };
 const TOKEN_ART: Partial<Record<Token['kind'], string>> = {
   artifact: 'token-artifact', majorSecret: 'token-major', minorSecret: 'token-minor', idol: 'token-idol',
 };
-const TOKEN_NAME: Partial<Record<Token['kind'], string>> = {
-  artifact: 'Artifact', majorSecret: 'Major secret', minorSecret: 'Minor secret', idol: 'Monkey idol',
-};
 
 function tokenBadge(t: Token): { label: string; cls: string } {
   switch (t.kind) {
@@ -29,7 +27,6 @@ function tokenBadge(t: Token): { label: string; cls: string } {
   }
 }
 
-const ROOM_TITLE = { entrance: 'Outside the dungeon', room: 'Room', cave: 'Crystal Cave', market: 'Market', fountain: 'Fountain of Healing', shrine: 'Monkey Shrine' };
 
 // The outline of each room type, centered on the room
 function shapePath(r: Room): string {
@@ -62,8 +59,8 @@ function RoomShape({ id, r }: { id: string; r: Room }) {
       )}
       <path d={d} className="outline" />
       {r.type === 'fountain' && <text x={r.x} y={r.y + 7}>❤</text>}
-      {r.type === 'market' && <text x={r.x} y={r.y - 8}>MARKET</text>}
-      <title>{ROOM_TITLE[r.type]}{r.depths ? ' (Depths)' : ''} · {id}</title>
+      {r.type === 'market' && <text x={r.x} y={r.y - 8}>{t('marketLabel')}</text>}
+      <title>{t(`roomType.${r.type}` as Key)}{r.depths ? t('depthsTag') : ''}</title>
     </g>
   );
 }
@@ -180,7 +177,7 @@ export function Board({ state, interactive, onMove, onTeleport }: Props) {
           return (
             <g key={`tp-${room}`} className="target teleport" onClick={() => onTeleport(room)}>
               <circle cx={r.x} cy={r.y} r={27} />
-              <title>Teleport here (click the blue ring)</title>
+              <title>{t('teleportHere')}</title>
             </g>
           );
         })}
@@ -198,7 +195,7 @@ export function Board({ state, interactive, onMove, onTeleport }: Props) {
                 ...Array.from({ length: o.monsters }, () => 'monster' as const),
                 ...(o.locked ? ['lock' as const] : []),
               ]} />
-              <title>{o.allowed ? `Move here: ${o.boots} Boot${o.boots > 1 ? 's' : ''}${o.monsters ? `, ${o.monsters} monster damage (Swords block)` : ''}` : o.reason}</title>
+              <title>{o.allowed ? t('moveHere', { boots: o.boots, monsters: o.monsters }) : o.reason && format(o.reason)}</title>
             </g>
           );
         })}
@@ -225,7 +222,7 @@ export function Board({ state, interactive, onMove, onTeleport }: Props) {
                     <text x={x} y={y + 4}>{b.label}</text>
                   </>
                 )}
-                <title>{TOKEN_NAME[t.kind]}{t.kind === 'artifact' ? ` (${t.value} points)` : ''}</title>
+                <title>{t.kind === 'artifact' ? tr('artifactPoints', { value: t.value }) : tr(`tokenName.${t.kind}` as Key)}</title>
               </g>
             );
           }),
@@ -244,7 +241,7 @@ export function Board({ state, interactive, onMove, onTeleport }: Props) {
               <path d={`M${x - 10} ${y + 13} Q${x - 10} ${y - 3} ${x} ${y - 5} Q${x + 10} ${y - 3} ${x + 10} ${y + 13} Z`} fill={PAWN_COLOR[p.color]} />
               <circle cx={x} cy={y - 10} r={6.5} fill={PAWN_COLOR[p.color]} />
               <ellipse cx={x} cy={y - 9} rx={3.6} ry={3.3} className="pawn-face" />
-              <title>{p.name}{p.status === 'escaped' ? ' (escaped)' : ''}</title>
+              <title>{p.name}{p.status === 'escaped' ? t('escapedTag') : ''}</title>
             </g>
           );
         })}

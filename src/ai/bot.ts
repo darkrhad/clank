@@ -204,7 +204,7 @@ function stuckFor(s: GameState, level: Level, what: 'boots' | 'swords'): boolean
   const left = available(s);
   return moveOptions(s).some((m) => {
     if ((dist[m.to] ?? Infinity) >= (dist[me.room] ?? Infinity)) return false;
-    if (what === 'boots') return !m.allowed && m.reason?.startsWith('Needs') && left.boots + 1 >= m.boots;
+    if (what === 'boots') return !m.allowed && m.reason?.k === 'needsBoots' && left.boots + 1 >= m.boots;
     // Swords only help on a monster tunnel the bot can otherwise walk now
     return left.boots >= m.boots && (!m.locked || hasToken(me, 'masterKey')) && m.monsters > left.swords;
   });

@@ -1,15 +1,17 @@
 import { Fragment, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { cardDef, CARDS, type CardDef } from '../engine/cards';
 import { ART } from './art';
+import { cardName, cardText, getLang, t, type Key } from '../i18n';
 import { Boot, CompanionIcon, EffectLine, Gold, Points, RichText, Skill, Sword } from './Symbols';
 
 // Laid out like the physical cards: banner with points, type tab, a picture
 // area with the resource symbols down the left, the text box, the ACQUIRE
 // bar, and the cost in the bottom-right corner (red Swords for monsters).
 
-const SUBTITLE: Partial<Record<CardDef['banner'], string>> = { monster: 'Monster', device: 'Device' };
-
-const subtitle = (d: CardDef) => (d.companion ? 'Companion' : d.gem ? 'Gem' : SUBTITLE[d.banner]);
+const subtitle = (d: CardDef): string | undefined => {
+  const kind = d.companion ? 'companion' : d.gem ? 'gem' : d.banner === 'monster' || d.banner === 'device' ? d.banner : null;
+  return kind ? t(`sub.${kind}` as Key) : undefined;
+};
 
 const color = (d: CardDef) => (d.id === 'secretTome' ? 'tome' : d.banner);
 
@@ -31,7 +33,7 @@ function Or({ d }: { d: CardDef }) {
   return (
     <>
       {d.choices!.map((c, i) => (
-        <Fragment key={i}>{i > 0 && <span className="c-or">–OR–</span>}<span><EffectLine e={c} /></span></Fragment>
+        <Fragment key={i}>{i > 0 && <span className="c-or">{t('or')}</span>}<span><EffectLine e={c} /></span></Fragment>
       ))}
     </>
   );
@@ -58,14 +60,15 @@ function useFit<T extends HTMLElement>(key: string, min: number) {
 function TextBox({ d }: { d: CardDef }) {
   const device = d.banner === 'device';
   const monster = d.banner === 'monster';
-  const ref = useFit<HTMLDivElement>(d.id, 6.5);
+  const text = cardText(d);
+  const ref = useFit<HTMLDivElement>(`${d.id}-${getLang()}`, 6.5);
   return (
     <div className="c-text" ref={ref}>
       {d.gold ? <div className="c-big"><Gold n={d.gold} /></div> : null}
-      {d.text && <p><RichText text={d.text} /></p>}
-      {monster && d.defeat && <p><b>DEFEAT:</b> <EffectLine e={d.defeat} /></p>}
-      {device && d.use && <p><b>USE:</b> <EffectLine e={d.use} /></p>}
-      {d.choices && <div className="c-choices">{device && <b>USE:</b>}<Or d={d} /></div>}
+      {text && <p><RichText text={text} /></p>}
+      {monster && d.defeat && <p><b>{t('defeat')}</b> <EffectLine e={d.defeat} /></p>}
+      {device && d.use && <p><b>{t('useLabel')}</b> <EffectLine e={d.use} /></p>}
+      {d.choices && <div className="c-choices">{device && <b>{t('useLabel')}</b>}<Or d={d} /></div>}
     </div>
   );
 }
@@ -93,47 +96,49 @@ function Name({ name }: { name: string }) {
 
 export function Card({ uid, id, onClick, disabled, small, children, cost }: Props) {
   const d = uid ? cardDef(uid) : CARDS[id!];
-  const strip = d.danger ? ['DANGER', '+1 cube for dragon attacks.']
-    : d.arrive?.allPlayersClank ? ['ARRIVE', `All players +${d.arrive.allPlayersClank} Loảng xoảng!`]
-    : d.arrive?.returnCubes ? ['ARRIVE', `Put ${d.arrive.returnCubes} dragon cubes back in the bag.`]
+  const lang = getLang();
+  const name = cardName(d.id);
+  const strip = d.danger ? [t('danger'), t('dangerText')]
+    : d.arrive?.allPlayersClank ? [t('arrive'), t('arriveClank', { n: d.arrive.allPlayersClank })]
+    : d.arrive?.returnCubes ? [t('arrive'), t('arriveCubes', { n: d.arrive.returnCubes })]
     : null;
   const discounted = cost !== undefined && d.cost !== undefined && cost !== d.cost;
   return (
     <div
       className={`card t-${color(d)}${small ? ' small' : ''}${onClick && !disabled ? ' clickable' : ''}${disabled ? ' disabled' : ''}`}
       onClick={disabled ? undefined : onClick}
-      title={`${d.name}${subtitle(d) ? ` · ${subtitle(d)}` : ''}${d.source === 'assumed' ? ' (values assumed)' : ''}`}
+      title={`${name}${subtitle(d) ? ` · ${subtitle(d)}` : ''}${d.source === 'assumed' ? t('valuesAssumed') : ''}`}
     >
       <div className="c-face">
         <div className="c-banner">
           {d.companion && <CompanionIcon />}
-          <Name name={d.name} />
+          <Name name={name} />
           {d.points || d.bonus ? <Points n={d.points || '?'} /> : null}
         </div>
 
         <div className={`c-art${ART[d.id] ? ' has-art' : ''}`} style={ART[d.id] ? { backgroundImage: `url(${ART[d.id]})` } : undefined}>
           <LeftColumn d={d} />
           <div className="c-badges">
-            {d.arrive && <span className="badge-arrive" title="Arrive">!</span>}
-            {d.dragonAttack && <span className="badge-dragon" title="Dragon attack when revealed"><i>🐉</i></span>}
+            {d.arrive && <span className="badge-arrive" title={t('arriveBadge')}>!</span>}
+            {d.dragonAttack && <span className="badge-dragon" title={t('dragonBadge')}><i>🐉</i></span>}
           </div>
-          {d.danger && <span className="badge-danger" title="Danger">+</span>}
+          {d.danger && <span className="badge-danger" title={t('dangerBadge')}>+</span>}
         </div>
 
-        {strip && <Bar className="c-strip" k={d.id}><b>{strip[0]}</b> {strip[1]}</Bar>}
+        {strip && <Bar className="c-strip" k={`${d.id}-${lang}`}><b>{strip[0]}</b> {strip[1]}</Bar>}
         <TextBox d={d} />
-        {d.acquire && <Bar className="c-acquire" k={d.id}><b>ACQUIRE</b> <EffectLine e={d.acquire} /></Bar>}
+        {d.acquire && <Bar className="c-acquire" k={`${d.id}-${lang}`}><b>{t('acquireBar')}</b> <EffectLine e={d.acquire} /></Bar>}
 
         {d.defeatSwords ? (
-          <div className="c-swords" title={`${d.defeatSwords} Swords to defeat`}>
+          <div className="c-swords" title={t('defeatTitle', { n: d.defeatSwords })}>
             {Array.from({ length: d.defeatSwords }, (_, i) => <Sword key={i} />)}
           </div>
         ) : d.cost ? (
-          <div className={`c-cost${discounted ? ' discounted' : ''}`} title={discounted ? `Costs ${cost} instead of ${d.cost}` : `Costs ${d.cost} Skill`}>
+          <div className={`c-cost${discounted ? ' discounted' : ''}`} title={discounted ? t('discountTitle', { n: cost!, full: d.cost }) : t('costTitle', { n: d.cost })}>
             <b>{discounted ? cost : d.cost}</b>
           </div>
         ) : null}
-        {d.source === 'assumed' && <span className="c-assumed">assumed</span>}
+        {d.source === 'assumed' && <span className="c-assumed">{t('assumed')}</span>}
       </div>
       {children}
     </div>

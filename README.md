@@ -1,8 +1,8 @@
-# Clank! demo
+# Loảng xoảng!
 
-A private, single-screen demo of the board game *Clank!* (Dire Wolf / Renegade),
-built from the rulebook to learn how to turn a board game into a React game.
-Not for publishing: the board image and card names belong to the publisher.
+A deck-building dungeon game with a Vietnamese twist, in English and Vietnamese
+(EN | VI switch). The rules follow the board game *Clank!* (Dire Wolf / Renegade), which
+this started as a learning project for; the board, the card art and the names are our own.
 
 ```sh
 npm install
@@ -35,7 +35,16 @@ In bot tournaments (`npx vitest run src/ai`), Medium beats Easy 59 to 1, Hard be
 - `engine/setup.ts`: a new game; `engine/engine.ts`: the rules; `engine/scoring.ts`: the end
 - `engine/rng.ts`: seeded random numbers, so a game can be replayed exactly
 - `engine/*.test.ts`: one test per rule, plus bots playing complete games
-- `assets/deck1-5.jpeg`: photos of the 100 Dungeon cards that `cards.ts` was read from (local only, not in the repo)
+- `src/i18n/`: English and Vietnamese texts (`en.ts`, `vi.ts`, `cardsVi.ts`) and the EN | VI switch
+- `src/ui/art/`, `src/ui/parts/`: card art and painted parts (board, tiles, tokens…); `#studio` shows them all
+- `scripts/make-art.mjs` (`npm run make-art`): card art with Draw Things, see `src/ui/art/PROMPTS.md`
+- `assets/`: local only, never published: photos of the cards, the original board and the rulebook
+
+## Deploy (Vercel)
+
+Import the GitHub repo on vercel.com; `vercel.json` sets the build (`npm run build` → `dist/`).
+Every push to `main` redeploys. With the Vercel CLI, `.vercelignore` keeps `assets/` and
+`art-review/` out of the upload.
 
 ## Differences from the real game
 

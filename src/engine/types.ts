@@ -1,6 +1,8 @@
 // The whole game state is plain data: easy to save, send over the network,
 // replay and test. Rules live in engine.ts; screens only read this.
 
+import type { Msg } from '../i18n';
+
 export type RoomId = string;
 export type CardUid = string; // e.g. "burgle#3"; the part before "#" is the card id
 
@@ -81,7 +83,7 @@ export interface GameState {
   rage: number; // index on the rage track
   countdown: { playerId: string; space: number } | null;
   pending: Pending | null;
-  log: string[];
+  log: Msg[]; // keys and values, shown in the player's language (i18n/format)
   over: boolean;
 }
 

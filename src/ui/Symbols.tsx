@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
 import type { Choice, Effect } from '../engine/cards';
+import { cardName, t, type Key } from '../i18n';
 
 // The symbols printed on the physical cards: Skill is a blue diamond, a Sword
 // a red circle, a Boot a yellow square, Gold a coin, points a green hexagon.
@@ -71,7 +72,6 @@ export function RichText({ text }: { text: string }) {
   );
 }
 
-const DRAW = ['', 'Draw a card.', 'Draw two cards.', 'Draw three cards.'];
 
 // An effect as the card prints it, e.g. DEFEAT: (3), all other players get +1 Loảng xoảng!
 export function EffectLine({ e }: { e: Effect & Partial<Choice> }) {
@@ -81,13 +81,13 @@ export function EffectLine({ e }: { e: Effect & Partial<Choice> }) {
   if (e.swords) parts.push(<>{repeat(e.swords, (i) => <Sword key={i} />)}</>);
   if (e.boots) parts.push(<>{repeat(e.boots, (i) => <Boot key={i} />)}</>);
   if (e.heal) parts.push(<>{repeat(e.heal, (i) => <Heart key={i} />)}</>);
-  if (e.clank) parts.push(`${e.clank > 0 ? '+' : ''}${e.clank} Loảng xoảng!`);
-  if (e.othersClank) parts.push(`others +${e.othersClank} Loảng xoảng!`);
-  if (e.draw) parts.push(DRAW[e.draw] ?? `Draw ${e.draw} cards.`);
-  if (e.teleport) parts.push('Teleport to an adjacent room.');
-  if (e.attack) parts.push('The dragon attacks');
-  if (e.trash) parts.push('Trash a card.');
-  if (e.buyTomes) parts.push(<>Spend <Gold n={7} /> to take two Secret Tomes.</>);
-  if (e.adjacentSecret) parts.push('Take a secret from an adjacent room.');
+  if (e.clank) parts.push(t('eff.clank', { n: e.clank }));
+  if (e.othersClank) parts.push(t('eff.othersClank', { n: e.othersClank }));
+  if (e.draw) parts.push(e.draw <= 3 ? t(`eff.draw${e.draw}` as Key) : t('eff.drawN', { n: e.draw }));
+  if (e.teleport) parts.push(t('eff.teleport'));
+  if (e.attack) parts.push(t('eff.attack'));
+  if (e.trash) parts.push(t('eff.trash'));
+  if (e.buyTomes) parts.push(<>{t('eff.spend')} <Gold n={7} /> {t('eff.buyTomes', { card: cardName('secretTome') })}</>);
+  if (e.adjacentSecret) parts.push(t('eff.adjacentSecret'));
   return <>{parts.map((p, i) => <Fragment key={i}>{i > 0 && ', '}{p}</Fragment>)}</>;
 }

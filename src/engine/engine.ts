@@ -3,16 +3,23 @@
 
 import { produce } from 'immer';
 import { CARDS, cardDef, type CardDef, type Choice, type Effect } from './cards';
-import { roomLabel, ROOMS, TUNNELS, type Tunnel } from './map';
+import { format, msg, type Msg } from '../i18n';
+import { ROOMS, TUNNELS, type Tunnel } from './map';
 import { random } from './rng';
 import { SECRETS } from './secrets';
 import { BLACK_CUBES, drawCards, HAND_SIZE, MARKET_PRICE, MAX_HEALTH, newTurn, RAGE_TRACK } from './setup';
 import type { CardUid, GameState, Move, Player, RoomId, SecretId, Token } from './types';
 
-export class RuleError extends Error {}
+// Why a move isn't allowed. msg is the key and values (shown in the player's
+// language); message is the English text, for logs and tests.
+export class RuleError extends Error {
+  constructor(public msg: Msg) {
+    super(format(msg, 'en'));
+  }
+}
 
-function fail(message: string): never {
-  throw new RuleError(message);
+function fail(m: Msg): never {
+  throw new RuleError(m);
 }
 
 // ---------- Questions the screens ask ----------
@@ -30,10 +37,10 @@ export const isExhausted = (s: GameState) => s.turn.exhausted && !s.turn.noCaveS
 export const cardCost = (s: GameState, d: CardDef) => Math.max(0, (d.cost ?? 0) - (d.gem ? s.turn.gemDiscount : 0));
 
 // Why a Dungeon Row card can't be bought, used or fought in this room, if it can't
-export function placeProblem(s: GameState, d: CardDef): string | undefined {
+export function placeProblem(s: GameState, d: CardDef): Msg | undefined {
   const room = ROOMS[currentPlayer(s).room];
-  if (d.onlyInCrystalCave && room.type !== 'cave') return `${d.name} can only be fought in a Crystal Cave`;
-  if (d.deep && !room.depths) return `${d.name} is Deep: only in the Depths`;
+  if (d.onlyInCrystalCave && room.type !== 'cave') return msg('onlyCrystalCave', { card: d.id });
+  if (d.deep && !room.depths) return msg('deepOnly', { card: d.id });
   return undefined;
 }
 
@@ -76,7 +83,7 @@ export interface MoveOption {
   monsters: number;
   locked: boolean;
   allowed: boolean;
-  reason?: string;
+  reason?: Msg;
   minSwords: number; // Swords needed so the damage doesn't knock you out
 }
 
@@ -92,12 +99,12 @@ export function moveOptions(s: GameState): MoveOption[] {
     const monsters = s.turn.ignoreMonsters ? 0 : t.monsters ?? 0;
     const maxDamage = Math.min(MAX_HEALTH - 1 - p.damage, p.supply);
     const minSwords = Math.max(0, monsters - Math.max(0, maxDamage));
-    let reason: string | undefined;
-    if (isExhausted(s)) reason = 'You entered a Crystal Cave this turn';
-    else if (left.boots < boots) reason = `Needs ${boots} Boot${boots > 1 ? 's' : ''}`;
-    else if (t.locked && !hasToken(p, 'masterKey')) reason = 'Locked: needs a Master Key';
-    else if (to === 'entrance' && !hasArtifact(p)) reason = "You can't leave without an Artifact";
-    else if (minSwords > left.swords) reason = 'The monster damage would knock you out';
+    let reason: Msg | undefined;
+    if (isExhausted(s)) reason = msg('exhaustedCave');
+    else if (left.boots < boots) reason = msg('needsBoots', { n: boots });
+    else if (t.locked && !hasToken(p, 'masterKey')) reason = msg('lockedKey');
+    else if (to === 'entrance' && !hasArtifact(p)) reason = msg('cantLeave');
+    else if (minSwords > left.swords) reason = msg('wouldKnockOut');
     options.push({ to, boots, monsters, locked: !!t.locked, allowed: !reason, reason, minSwords });
   }
   return options;
@@ -121,12 +128,12 @@ export function adjacentSecrets(s: GameState): { room: RoomId; index: number }[]
 }
 
 // Why an option of a "this -OR- that" card can't be picked now, if it can't
-export function choiceProblem(s: GameState, c: Choice): string | undefined {
+export function choiceProblem(s: GameState, c: Choice): Msg | undefined {
   const p = currentPlayer(s);
-  if (c.buyTomes && p.gold < MARKET_PRICE) return `Needs ${MARKET_PRICE} Gold`;
-  if (c.buyTomes && !s.reserve.secretTome.length) return 'No Secret Tomes left';
-  if (c.adjacentSecret && !adjacentSecrets(s).length) return 'No secret in an adjacent room';
-  if (c.trash && !p.playArea.length && !p.discard.length) return 'Nothing to trash';
+  if (c.buyTomes && p.gold < MARKET_PRICE) return msg('needsGold', { n: MARKET_PRICE });
+  if (c.buyTomes && !s.reserve.secretTome.length) return msg('noneOfCardLeft', { card: 'secretTome' });
+  if (c.adjacentSecret && !adjacentSecrets(s).length) return msg('noAdjacentSecret');
+  if (c.trash && !p.playArea.length && !p.discard.length) return msg('nothingToTrash');
   return undefined;
 }
 
@@ -137,16 +144,17 @@ export function trashOptions(s: GameState): CardUid[] {
   return s.pending?.kind === 'trash' && s.pending.reason === 'burgle' ? cards.filter((c) => c.startsWith('burgle#')) : cards;
 }
 
-export function canEndTurn(s: GameState): { ok: boolean; reason?: string } {
-  if (s.pending) return { ok: false, reason: 'Finish the current choice first' };
-  if (currentPlayer(s).hand.length) return { ok: false, reason: 'Play all the cards in your hand first' };
+export function canEndTurn(s: GameState): { ok: boolean; reason?: Msg } {
+  if (s.pending) return { ok: false, reason: msg('finishChoice') };
+  if (currentPlayer(s).hand.length) return { ok: false, reason: msg('playAllFirst') };
   return { ok: true };
 }
 
 // ---------- Effects ----------
 
-function log(s: GameState, message: string) {
-  s.log.push(message);
+// The log stores keys and values, not text, so it can be shown in any language
+function log(s: GameState, k: Msg['k'], p?: Msg['p']) {
+  s.log.push(msg(k, p));
 }
 
 function addClank(s: GameState, p: Player, amount: number) {
@@ -197,7 +205,7 @@ function applyEffect(s: GameState, p: Player, e: Effect) {
     // Only black cubes that were drawn and set aside can go back
     const back = Math.min(e.returnCubes, BLACK_CUBES - s.bag.black);
     s.bag.black += back;
-    log(s, `${back} dragon cube${back === 1 ? '' : 's'} go${back === 1 ? 'es' : ''} back into the bag.`);
+    log(s, 'cubesBack', { n: back });
   }
 }
 
@@ -214,14 +222,14 @@ function checkConditionals(s: GameState) {
     if (d.ifCompanionDraw && p.playArea.some((other) => other !== uid && cardDef(other).companion)) {
       s.turn.conditionalDraws.push(uid);
       drawCards(s, p, d.ifCompanionDraw);
-      log(s, `${p.name} draws a card (${d.name}).`);
+      log(s, 'drawsCard', { player: p.name, card: uid });
     }
     const once = d.ifArtifact && hasArtifact(p) ? d.ifArtifact : d.ifCrown && hasToken(p, 'crown') ? d.ifCrown : null;
     if (once && (once.teleport || once.heal)) {
       s.turn.conditionalDraws.push(uid);
       s.turn.teleports += once.teleport ?? 0;
       if (once.heal) heal(p, once.heal);
-      log(s, `${p.name} ${once.teleport ? 'may teleport' : 'heals 1'} (${d.name}).`);
+      log(s, once.teleport ? 'mayTeleport' : 'healsCard', { player: p.name, card: uid });
     }
   }
 }
@@ -231,7 +239,7 @@ function checkConditionals(s: GameState) {
 function startCountdown(s: GameState, p: Player) {
   if (!s.countdown) {
     s.countdown = { playerId: p.id, space: 1 };
-    log(s, `The countdown starts (${p.name} is out of the dungeon).`);
+    log(s, 'countdownStarts', { player: p.name });
   }
 }
 
@@ -239,9 +247,7 @@ function knockOut(s: GameState, p: Player) {
   if (p.status !== 'playing') return;
   const rescued = hasArtifact(p) && !ROOMS[p.room].depths;
   p.status = rescued ? 'rescued' : 'dead';
-  log(s, rescued
-    ? `${p.name} is knocked out, but rescued by the townsfolk.`
-    : `${p.name} is knocked out ${hasArtifact(p) ? 'in the Depths' : 'without an Artifact'} and loses.`);
+  log(s, rescued ? 'rescued' : hasArtifact(p) ? 'lostDepths' : 'lostNoArtifact', { player: p.name });
   startCountdown(s, p);
 }
 
@@ -274,8 +280,8 @@ export function dragonAttack(s: GameState, extra = 0) {
     hits[victim.id] = (hits[victim.id] ?? 0) + 1;
     takeDamage(s, victim, 1);
   }
-  const summary = Object.entries(hits).map(([id, n]) => `${s.players.find((p) => p.id === id)!.name} ${n}`).join(', ');
-  log(s, `🐉 Dragon attack! ${summary ? 'Damage: ' + summary : 'No damage'}${black ? ` (${black} set aside)` : ''}.`);
+  const summary = Object.entries(hits).map(([id, n]) => `${s.players.find((p) => p.id === id)!.name} (${n})`).join(', ');
+  log(s, 'dragonAttack', { damage: summary, black });
 }
 
 // Puts the next Dungeon card into an empty space of the row and applies its Arrive effect
@@ -285,7 +291,7 @@ function reveal(s: GameState, slot: number): CardUid | undefined {
   s.dungeonRow[slot] = card;
   const d = cardDef(card);
   if (d.arrive) {
-    log(s, `${d.name} arrives${d.arrive.allPlayersClank ? ': all players get +1 Loảng xoảng!' : '.'}`);
+    log(s, 'arrives', { card, all: !!d.arrive.allPlayersClank });
     applyEffect(s, currentPlayer(s), d.arrive);
   }
   return card;
@@ -306,7 +312,7 @@ function refillRow(s: GameState) {
 function checkGameOver(s: GameState) {
   if (s.players.every((p) => p.status !== 'playing')) {
     s.over = true;
-    log(s, 'Everyone is out of the dungeon. Game over!');
+    log(s, 'gameOver');
   }
 }
 
@@ -318,17 +324,17 @@ function advanceToNextPlayer(s: GameState) {
     s.current = (s.current + 1) % s.players.length;
     const p = currentPlayer(s);
     if (p.status === 'playing') {
-      log(s, `${p.name}'s turn.`);
+      log(s, 'turn', { player: p.name });
       return;
     }
     // The first player out moves the countdown instead of taking a turn
     if (s.countdown?.playerId === p.id) {
       s.countdown.space++;
       if (s.countdown.space <= 4) {
-        log(s, `Countdown space ${s.countdown.space}: instant dragon attack (+${s.countdown.space - 1} cubes).`);
+        log(s, 'countdownSpace', { space: s.countdown.space, extra: s.countdown.space - 1 });
         dragonAttack(s, s.countdown.space - 1);
       } else {
-        log(s, 'Countdown space 5: the dragon knocks out everyone still in the dungeon!');
+        log(s, 'countdownEnd');
         s.players.forEach((other) => knockOut(s, other));
       }
     }
@@ -354,12 +360,12 @@ function enterRoom(s: GameState, p: Player, to: RoomId) {
   if (room.type === 'cave') s.turn.exhausted = true;
   if (room.type === 'fountain' && p.damage) {
     heal(p, 1);
-    log(s, `${p.name} heals 1 at the fountain.`);
+    log(s, 'fountainHeal', { player: p.name });
   }
   if (to === 'entrance') {
     p.status = 'escaped';
     p.tokens.push({ kind: 'mastery' });
-    log(s, `${p.name} escapes the dungeon with an Artifact! (+20 Mastery)`);
+    log(s, 'escapes', { player: p.name });
     startCountdown(s, p);
     finishTurn(s);
   }
@@ -367,7 +373,7 @@ function enterRoom(s: GameState, p: Player, to: RoomId) {
 
 function revealSecret(s: GameState, p: Player, id: SecretId) {
   const secret = SECRETS[id];
-  log(s, `${p.name} finds ${secret.name}: ${secret.text}`);
+  log(s, 'findsSecret', { player: p.name, secret: id });
   s.turn.earned.skill += secret.skill ?? 0;
   gainGold(s, p, secret.gold ?? 0);
   if (secret.draw) drawCards(s, p, secret.draw);
@@ -377,38 +383,39 @@ function revealSecret(s: GameState, p: Player, id: SecretId) {
 }
 
 function takeToken(s: GameState, p: Player, index: number) {
-  if (!s.turn.canTakeToken) fail('You can take one token each time you enter a room');
+  if (!s.turn.canTakeToken) fail(msg('oneTokenPerEntry'));
   const tokens = s.roomTokens[p.room] ?? [];
-  const token = tokens[index] ?? fail('No such token here');
+  const token = tokens[index] ?? fail(msg('noSuchToken'));
   if (token.kind === 'artifact') {
     if (p.tokens.filter((t) => t.kind === 'artifact').length >= artifactLimit(p)) {
-      fail(hasToken(p, 'backpack') ? 'You already carry two Artifacts' : 'You already carry an Artifact (a Backpack allows a second)');
+      fail(msg(hasToken(p, 'backpack') ? 'carryTwoArtifacts' : 'carryOneArtifact'));
     }
     s.rage = Math.min(s.rage + 1, RAGE_TRACK.length - 1);
     p.tokens.push(token);
-    log(s, `${p.name} takes the Artifact (${token.value})! The dragon gets angrier.`);
+    log(s, 'takesArtifact', { player: p.name, value: token.value });
   } else if (token.kind === 'majorSecret' || token.kind === 'minorSecret') {
     revealSecret(s, p, token.secret);
   } else {
     p.tokens.push(token);
-    log(s, `${p.name} takes a ${token.kind === 'idol' ? 'Monkey Idol' : token.kind}.`);
+    log(s, 'takesToken', { player: p.name, token: token.kind });
   }
   tokens.splice(index, 1);
   s.turn.canTakeToken = false;
 }
 
 function rowCard(s: GameState, slot: number): CardUid {
-  return s.dungeonRow[slot] ?? fail('That space in the Dungeon Row is empty');
+  return s.dungeonRow[slot] ?? fail(msg('rowEmpty'));
 }
 
-function pay(s: GameState, resource: 'skill' | 'swords', amount: number, what: string) {
-  if (available(s)[resource] < amount) fail(`${what} needs ${amount} ${resource === 'skill' ? 'Skill' : 'Swords'}`);
+// Skill to buy or use a card, Swords to defeat a monster
+function pay(s: GameState, resource: 'skill' | 'swords', amount: number, card: string) {
+  if (available(s)[resource] < amount) fail(msg(resource === 'skill' ? 'needsSkill' : 'defeatNeeds', { card, n: amount }));
   s.turn.spent[resource] += amount;
 }
 
 function playCard(s: GameState, p: Player, uid: CardUid) {
   const i = p.hand.indexOf(uid);
-  if (i < 0) fail('That card is not in your hand');
+  if (i < 0) fail(msg('notInHand'));
   p.hand.splice(i, 1);
   p.playArea.push(uid);
   const d = cardDef(uid);
@@ -433,7 +440,7 @@ function resolveChoice(s: GameState, p: Player, d: CardDef, c: Choice) {
   const problem = choiceProblem(s, c);
   if (problem) fail(problem);
   s.pending = null;
-  log(s, `${p.name} chooses ${c.label} (${d.name}).`);
+  log(s, 'chooses', { player: p.name, card: d.id, option: d.choices!.indexOf(c) });
   applyEffect(s, p, c);
   if (c.buyTomes) {
     p.gold -= MARKET_PRICE;
@@ -450,8 +457,8 @@ function resolveChoice(s: GameState, p: Player, d: CardDef, c: Choice) {
 
 function step(s: GameState, move: Move) {
   const p = currentPlayer(s);
-  if (s.over) fail('The game is over');
-  if (s.pending && move.type !== 'choose' && move.type !== 'chooseOption') fail('Finish the current choice first');
+  if (s.over) fail(msg('gameIsOver'));
+  if (s.pending && move.type !== 'choose' && move.type !== 'chooseOption') fail(msg('finishChoice'));
 
   switch (move.type) {
     case 'play':
@@ -463,37 +470,37 @@ function step(s: GameState, move: Move) {
       break;
 
     case 'choose': {
-      const pending = s.pending ?? fail('Nothing to choose');
+      const pending = s.pending ?? fail(msg('nothingToChoose'));
       if (pending.kind === 'discardToDraw' || pending.kind === 'discardToChoose') {
         if (move.uid) {
           const i = p.hand.indexOf(move.uid);
-          if (i < 0) fail('Pick a card from your hand');
+          if (i < 0) fail(msg('pickHandCard'));
           p.discard.push(...p.hand.splice(i, 1));
           if (pending.kind === 'discardToDraw') {
             drawCards(s, p, pending.draw);
-            log(s, `${p.name} discards ${cardDef(move.uid).name} and draws ${pending.draw}.`);
-          } else log(s, `${p.name} discards ${cardDef(move.uid).name}.`);
+            log(s, 'discardsDraws', { player: p.name, card: move.uid, n: pending.draw });
+          } else log(s, 'discards', { player: p.name, card: move.uid });
         }
         s.pending = move.uid && pending.kind === 'discardToChoose' ? { kind: 'option', card: pending.card } : null;
       } else if (pending.kind === 'trash') {
         const options = trashOptions(s);
         if (move.uid) {
-          if (!options.includes(move.uid)) fail(pending.reason === 'burgle' ? 'Pick a Burgle from your play area or discard pile' : 'Pick a card from your play area or discard pile');
+          if (!options.includes(move.uid)) fail(pending.reason === 'burgle' ? msg('pickBurgle', { card: 'burgle' }) : msg('pickPlayOrDiscard'));
           const pile = p.playArea.includes(move.uid) ? p.playArea : p.discard;
           pile.splice(pile.indexOf(move.uid), 1);
-          log(s, `${p.name} trashes ${cardDef(move.uid).name}.`);
-        } else if (pending.reason === 'spring' && options.length) fail('You must trash a card');
+          log(s, 'trashes', { player: p.name, card: move.uid });
+        } else if (pending.reason === 'spring' && options.length) fail(msg('mustTrash'));
         if (pending.reason === 'spring') s.turn.trashes--;
         s.pending = null;
-      } else fail('Pick one of the options');
+      } else fail(msg('pickOption'));
       break;
     }
 
     case 'chooseOption': {
-      const pending = s.pending ?? fail('Nothing to choose');
+      const pending = s.pending ?? fail(msg('nothingToChoose'));
       if (pending.kind === 'option') {
         const d = cardDef(pending.card);
-        const c = d.choices?.[move.index ?? -1] ?? fail(`Pick one of the options of ${d.name}`);
+        const c = d.choices?.[move.index ?? -1] ?? fail(msg('pickOptionOf', { card: d.id }));
         resolveChoice(s, p, d, c);
       } else if (pending.kind === 'replaceRow') {
         if (move.index !== null) {
@@ -502,106 +509,106 @@ function step(s: GameState, move: Move) {
           s.dungeonRow[move.index] = null;
           const card = reveal(s, move.index);
           // Its Dragon Attack symbol is ignored
-          log(s, `${p.name} replaces ${cardDef(old).name}${card ? ` with ${cardDef(card).name}` : ''}.`);
+          log(s, 'replaces', { player: p.name, card: old, card2: card });
         }
         s.pending = null;
       } else if (pending.kind === 'adjacentSecret') {
         const options = adjacentSecrets(s);
         if (move.index === null) {
-          if (options.length) fail('Pick a secret');
+          if (options.length) fail(msg('pickSecret'));
         } else {
-          const { room, index } = options[move.index] ?? fail('Pick a secret');
+          const { room, index } = options[move.index] ?? fail(msg('pickSecret'));
           const token = s.roomTokens[room].splice(index, 1)[0];
           if (token.kind === 'majorSecret' || token.kind === 'minorSecret') revealSecret(s, p, token.secret);
         }
         s.pending = null;
-      } else fail('Pick a card');
+      } else fail(msg('pickCard'));
       break;
     }
 
     case 'buy': {
       const card = rowCard(s, move.slot);
       const d = cardDef(card);
-      if (d.banner === 'monster') fail('Monsters are fought with Swords, not bought');
-      if (d.banner === 'device') fail('Devices are used, not kept');
+      if (d.banner === 'monster') fail(msg('monstersNotBought'));
+      if (d.banner === 'device') fail(msg('devicesNotKept'));
       const problem = placeProblem(s, d);
       if (problem) fail(problem);
-      pay(s, 'skill', cardCost(s, d), d.name);
+      pay(s, 'skill', cardCost(s, d), d.id);
       p.discard.push(card);
       s.dungeonRow[move.slot] = null;
-      log(s, `${p.name} acquires ${d.name}.`);
+      log(s, 'acquires', { player: p.name, card: d.id });
       if (d.acquire) applyEffect(s, p, d.acquire);
       break;
     }
 
     case 'buyReserve': {
       const pile = s.reserve[move.pile];
-      if (!pile.length) fail('That Reserve pile is empty');
+      if (!pile.length) fail(msg('reserveEmpty'));
       const d = CARDS[move.pile];
-      pay(s, 'skill', d.cost ?? 0, d.name);
+      pay(s, 'skill', d.cost ?? 0, d.id);
       p.discard.push(pile.pop()!);
-      log(s, `${p.name} acquires ${d.name}.`);
+      log(s, 'acquires', { player: p.name, card: d.id });
       break;
     }
 
     case 'fight': {
       const card = rowCard(s, move.slot);
       const d = cardDef(card);
-      if (d.banner !== 'monster') fail('Only Monsters can be fought');
+      if (d.banner !== 'monster') fail(msg('onlyMonsters'));
       const problem = placeProblem(s, d);
       if (problem) fail(problem);
-      pay(s, 'swords', d.defeatSwords ?? 0, `Defeating ${d.name}`);
+      pay(s, 'swords', d.defeatSwords ?? 0, d.id);
       applyEffect(s, p, d.defeat ?? {});
       s.dungeonDiscard.push(card);
       s.dungeonRow[move.slot] = null;
-      log(s, `${p.name} defeats ${d.name}.`);
+      log(s, 'defeats', { player: p.name, card: d.id });
       break;
     }
 
     case 'fightGoblin': {
       const d = CARDS.goblin;
-      pay(s, 'swords', d.defeatSwords!, 'Defeating the Goblin');
+      pay(s, 'swords', d.defeatSwords!, 'goblin');
       applyEffect(s, p, d.defeat!);
-      log(s, `${p.name} defeats the Goblin.`);
+      log(s, 'defeats', { player: p.name, card: 'goblin' });
       break;
     }
 
     case 'useDevice': {
       const card = rowCard(s, move.slot);
       const d = cardDef(card);
-      if (d.banner !== 'device') fail('That card is not a Device');
+      if (d.banner !== 'device') fail(msg('notDevice'));
       const problem = placeProblem(s, d);
       if (problem) fail(problem);
-      pay(s, 'skill', d.cost ?? 0, d.name);
+      pay(s, 'skill', d.cost ?? 0, d.id);
       applyEffect(s, p, d.use ?? {});
       s.dungeonDiscard.push(card);
       s.dungeonRow[move.slot] = null;
-      log(s, `${p.name} uses ${d.name}.`);
+      log(s, 'uses', { player: p.name, card: d.id });
       if (d.choices) s.pending = { kind: 'option', card };
       break;
     }
 
     case 'move': {
       if (move.teleport) {
-        if (!teleportOptions(s).includes(move.to)) fail("You can't teleport there");
+        if (!teleportOptions(s).includes(move.to)) fail(msg('cantTeleport'));
         s.turn.teleports--;
-        log(s, `${p.name} teleports.`);
+        log(s, 'teleports', { player: p.name });
         enterRoom(s, p, move.to);
         break;
       }
-      const option = moveOptions(s).find((o) => o.to === move.to) ?? fail('No tunnel leads there');
+      const option = moveOptions(s).find((o) => o.to === move.to) ?? fail(msg('noTunnel'));
       if (!option.allowed) fail(option.reason!);
       const swords = Math.min(move.swords ?? option.minSwords, option.monsters);
-      if (swords < option.minSwords) fail('The monster damage would knock you out');
-      if (swords > available(s).swords) fail('Not enough Swords');
+      if (swords < option.minSwords) fail(msg('wouldKnockOut'));
+      if (swords > available(s).swords) fail(msg('notEnoughSwords'));
       s.turn.spent.boots += option.boots;
       s.turn.spent.swords += swords;
       const damage = option.monsters - swords;
-      if (move.to !== 'entrance') log(s, `${p.name} moves into ${roomLabel(move.to)}.`);
+      if (move.to !== 'entrance') log(s, 'movesInto', { player: p.name, room: move.to });
       if (damage) {
         p.supply -= damage;
         takeDamage(s, p, damage);
-        log(s, `${p.name} takes ${damage} damage in the tunnel.`);
+        log(s, 'tunnelDamage', { player: p.name, n: damage });
       }
       enterRoom(s, p, move.to);
       break;
@@ -612,31 +619,31 @@ function step(s: GameState, move: Move) {
       break;
 
     case 'buyMarket': {
-      if (ROOMS[p.room].type !== 'market') fail('You can only buy in a Market room');
-      if (p.gold < MARKET_PRICE) fail(`Market items cost ${MARKET_PRICE} Gold`);
+      if (ROOMS[p.room].type !== 'market') fail(msg('onlyMarket'));
+      if (p.gold < MARKET_PRICE) fail(msg('marketCost', { n: MARKET_PRICE }));
       if (move.item === 'crown') {
-        const value = s.market.crowns.shift() ?? fail('No Crowns left');
+        const value = s.market.crowns.shift() ?? fail(msg('noCrowns'));
         p.tokens.push({ kind: 'crown', value });
       } else {
-        if (!s.market[move.item]) fail('None left');
+        if (!s.market[move.item]) fail(msg('noneLeft'));
         s.market[move.item]--;
         p.tokens.push({ kind: move.item });
       }
       p.gold -= MARKET_PRICE;
-      log(s, `${p.name} buys a ${move.item === 'masterKey' ? 'Master Key' : move.item === 'backpack' ? 'Backpack' : 'Crown'}.`);
+      log(s, 'buys', { player: p.name, item: move.item });
       break;
     }
 
     case 'useToken': {
       const token = p.tokens[move.index];
-      if (token?.kind !== 'kept') fail('That token can\'t be used');
+      if (token?.kind !== 'kept') fail(msg('tokenUnusable'));
       const secret = SECRETS[token.secret];
-      if (!secret.heal && !secret.boots && !secret.swords) fail(`${secret.name} is kept for points`);
+      if (!secret.heal && !secret.boots && !secret.swords) fail(msg('keptForPoints', { secret: token.secret }));
       if (secret.heal) heal(p, secret.heal);
       s.turn.earned.boots += secret.boots ?? 0;
       s.turn.earned.swords += secret.swords ?? 0;
       p.tokens.splice(move.index, 1);
-      log(s, `${p.name} uses ${secret.name}.`);
+      log(s, 'usesSecret', { player: p.name, secret: token.secret });
       break;
     }
 

@@ -1,6 +1,6 @@
 import { cardDef } from '../engine/cards';
 import { adjacentSecrets, choiceProblem, currentPlayer, trashOptions } from '../engine/engine';
-import { roomLabel } from '../engine/map';
+import { cardName, choiceLabel, format, roomName, t } from '../i18n';
 import type { GameState, Move } from '../engine/types';
 import { Card } from './Card';
 
@@ -19,20 +19,20 @@ export function PendingDialog({ state, dispatch }: { state: GameState; dispatch:
     case 'discardToDraw':
       body = (
         <>
-          <h3>Discard a card to draw {pending.draw}</h3>
-          <p>The discarded card has no effect.</p>
+          <h3>{t('discardToDraw', { n: pending.draw })}</h3>
+          <p>{t('noEffect')}</p>
           {cards(me.hand, pick)}
-          <button onClick={() => pick(null)}>Don't discard</button>
+          <button onClick={() => pick(null)}>{t('dontDiscard')}</button>
         </>
       );
       break;
     case 'discardToChoose':
       body = (
         <>
-          <h3>{cardDef(pending.card).name}: discard a card to choose</h3>
-          <p>The discarded card has no effect.</p>
+          <h3>{t('discardToChoose', { card: cardName(pending.card) })}</h3>
+          <p>{t('noEffect')}</p>
           {cards(me.hand, pick)}
-          <button onClick={() => pick(null)}>Don't discard</button>
+          <button onClick={() => pick(null)}>{t('dontDiscard')}</button>
         </>
       );
       break;
@@ -40,11 +40,11 @@ export function PendingDialog({ state, dispatch }: { state: GameState; dispatch:
       const d = cardDef(pending.card);
       body = (
         <>
-          <h3>{d.name}: choose one</h3>
+          <h3>{t('chooseOne', { card: cardName(d.id) })}</h3>
           <div className="buttons">
             {d.choices!.map((c, i) => {
               const problem = choiceProblem(state, c);
-              return <button key={i} disabled={!!problem} title={problem} onClick={() => option(i)}>{c.label}</button>;
+              return <button key={i} disabled={!!problem} title={problem && format(problem)} onClick={() => option(i)}>{choiceLabel(d.id, i)}</button>;
             })}
           </div>
         </>
@@ -52,13 +52,17 @@ export function PendingDialog({ state, dispatch }: { state: GameState; dispatch:
       break;
     }
     case 'trash': {
-      const title = { spring: 'Magic Spring: trash a card', burgle: 'Master Burglar: trash a Burgle', card: 'Dragon Shrine: trash a card' };
+      const title = {
+        spring: format({ k: 'trashSpring', p: { secret: 'magicSpring' } }),
+        burgle: t('trashBurgleTitle', { card: cardName('masterBurglar'), card2: cardName('burgle') }),
+        card: t('trashCardTitle', { card: cardName('dragonShrine') }),
+      };
       body = (
         <>
           <h3>{title[pending.reason]}</h3>
-          <p>It leaves your deck for good. Good for Stumbles!</p>
+          <p>{t('trashNote', { card: cardName('stumble') })}</p>
           {cards(trashOptions(state), pick)}
-          {pending.reason !== 'spring' && <button onClick={() => pick(null)}>Don't trash</button>}
+          {pending.reason !== 'spring' && <button onClick={() => pick(null)}>{t('dontTrash')}</button>}
         </>
       );
       break;
@@ -66,23 +70,23 @@ export function PendingDialog({ state, dispatch }: { state: GameState; dispatch:
     case 'replaceRow':
       body = (
         <>
-          <h3>Treasure Hunter: replace a card in the Dungeon Row</h3>
-          <p>It goes to the discard pile and the next card takes its place (its Dragon Attack is ignored).</p>
+          <h3>{t('replaceTitle', { card: cardName('treasureHunter') })}</h3>
+          <p>{t('replaceNote')}</p>
           <div className="cards">
             {state.dungeonRow.map((uid, slot) => uid && <Card key={uid} uid={uid} small onClick={() => option(slot)} />)}
           </div>
-          <button onClick={() => option(null)}>Keep the row</button>
+          <button onClick={() => option(null)}>{t('keepRow')}</button>
         </>
       );
       break;
     case 'adjacentSecret':
       body = (
         <>
-          <h3>Wand of Wind: take a secret from an adjacent room</h3>
+          <h3>{t('adjacentTitle', { card: cardName('wandOfWind') })}</h3>
           <div className="buttons">
             {adjacentSecrets(state).map(({ room, index }, i) => {
-              const t = state.roomTokens[room][index];
-              return <button key={i} onClick={() => option(i)}>{t.kind === 'majorSecret' ? 'Major' : 'Minor'} secret in {roomLabel(room)} ({room})</button>;
+              const tok = state.roomTokens[room][index];
+              return <button key={i} onClick={() => option(i)}>{t('secretIn', { major: tok.kind === 'majorSecret', room: roomName(room) })}</button>;
             })}
           </div>
         </>

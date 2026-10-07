@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { chooseMove, LEVEL_NAME, LEVELS, type Level } from '../ai/bot';
+import { chooseMove, LEVELS, type Level } from '../ai/bot';
 import { applyMove, available, currentPlayer, RuleError, skipMove, type MoveOption } from '../engine/engine';
-import { ROOMS } from '../engine/map';
 import { finalScores } from '../engine/scoring';
 import { COLORS, createGame, MAX_HEALTH } from '../engine/setup';
 import type { GameState, Move } from '../engine/types';
@@ -9,10 +8,13 @@ import { Board } from './Board';
 import { BotPanel } from './BotPanel';
 import { DungeonPanel } from './DungeonPanel';
 import { PendingDialog } from './PendingDialog';
+import { RulesDialog } from './Rules';
 import { Gold, Heart } from './Symbols';
 import { PlayerPanel, tokenName } from './PlayerPanel';
+import { format, LANGS, roomName, setLang, t, type Key, type Msg } from '../i18n';
+import { useLang } from './useLang';
 
-const STATUS = { playing: 'in the dungeon', escaped: 'escaped', rescued: 'rescued', dead: 'knocked out' };
+const status = (s: GameState['players'][number]['status']) => t(`status.${s}` as Key);
 
 // Who plays each seat. Not part of the game state: the rules don't care.
 export type Controller = 'human' | Level;
@@ -21,11 +23,25 @@ type SeatKind = 'off' | Controller;
 const SPEEDS = { slow: 1200, normal: 600, fast: 200 };
 type Speed = keyof typeof SPEEDS;
 
-const controllerLabel = (c: Controller) => (c === 'human' ? '' : `🤖 ${LEVEL_NAME[c]}`);
+const levelName = (l: Level) => t(`level.${l}` as Key);
+const controllerLabel = (c: Controller) => (c === 'human' ? '' : `🤖 ${levelName(c)}`);
+
+// EN | VI: switches every text at once, also in the middle of a game
+export function LangSwitch() {
+  const lang = useLang();
+  return (
+    <div className="lang-switch" role="group" aria-label={t('language')}>
+      {LANGS.map((l) => (
+        <button key={l} className={l === lang ? 'on' : ''} aria-pressed={l === lang} onClick={() => setLang(l)}>{l.toUpperCase()}</button>
+      ))}
+    </div>
+  );
+}
 
 function Setup({ onStart }: { onStart: (names: string[], controllers: Controller[]) => void }) {
-  const [seats, setSeats] = useState<{ name: string; kind: SeatKind }[]>([
-    { name: 'Player 1', kind: 'human' },
+  const [rules, setRules] = useState(false);
+  const [seats, setSeats] = useState<{ name: string; kind: SeatKind }[]>(() => [
+    { name: t('playerN', { n: 1 }), kind: 'human' },
     { name: 'Nicki', kind: 'medium' },
     { name: '', kind: 'off' },
     { name: '', kind: 'off' },
@@ -37,37 +53,40 @@ function Setup({ onStart }: { onStart: (names: string[], controllers: Controller
   return (
     <div className="setup-screen">
     <div className="setup">
-      <h1>Loảng xoảng! <small>demo</small></h1>
-      <p>2–4 players. Each seat can be a person or an AI.</p>
+      <div className="setup-head">
+        <h1>Loảng xoảng! <small>demo</small></h1>
+        <div className="head-buttons"><button onClick={() => setRules(true)}>{t('rules')}</button><LangSwitch /></div>
+      </div>
+      <p>{t('subtitle')}</p>
       {seats.map((seat, i) => (
         <div key={i} className={`seat pc-${COLORS[i]}`}>
           <select value={seat.kind} onChange={(e) => {
             const kind = e.target.value as SeatKind;
-            const name = seat.name || (kind === 'off' ? '' : kind === 'human' ? `Player ${i + 1}` : `Bot ${i + 1}`);
+            const name = seat.name || (kind === 'off' ? '' : kind === 'human' ? t('playerN', { n: i + 1 }) : t('botN', { n: i + 1 }));
             update(i, { kind, name });
           }}>
-            <option value="off">— empty —</option>
-            <option value="human">Human</option>
-            {LEVELS.map((l) => <option key={l} value={l}>AI: {LEVEL_NAME[l]}</option>)}
+            <option value="off">{t('seatEmpty')}</option>
+            <option value="human">{t('seatHuman')}</option>
+            {LEVELS.map((l) => <option key={l} value={l}>{t('seatAi', { level: levelName(l) })}</option>)}
           </select>
-          <input value={seat.name} disabled={seat.kind === 'off'} placeholder={`Player ${i + 1}`}
+          <input value={seat.name} disabled={seat.kind === 'off'} placeholder={t('playerN', { n: i + 1 })}
             onChange={(e) => update(i, { name: e.target.value })} />
         </div>
       ))}
       <button className="primary" disabled={used.length < 2}
-        onClick={() => onStart(used.map((s, i) => s.name.trim() || `Player ${i + 1}`), used.map((s) => s.kind as Controller))}>
-        Start game
+        onClick={() => onStart(used.map((s, i) => s.name.trim() || t('playerN', { n: i + 1 })), used.map((s) => s.kind as Controller))}>
+        {t('startGame')}
       </button>
-      <p className="small"><a href="#studio" style={{ color: 'var(--accent)' }}>Card studio</a>: all cards, art and parts</p>
+      <p className="small"><a href="#studio" style={{ color: 'var(--accent)' }}>{t('studioLink')}</a>{t('studioDesc')}</p>
       <ul className="muted small levels">
-        <li><b>Easy</b>: knows the goal but plays sloppily. Grabs the nearest Artifact, ignores noise.</li>
-        <li><b>Medium</b>: plans routes, picks Artifacts by value and distance, blocks monsters, heals.</li>
-        <li><b>Hard</b>: weighs risk: the dragon, its health and time. Leaves early to start the countdown.</li>
+        <li><b>{levelName('easy')}</b>: {t('levelEasyDesc')}</li>
+        <li><b>{levelName('medium')}</b>: {t('levelMediumDesc')}</li>
+        <li><b>{levelName('hard')}</b>: {t('levelHardDesc')}</li>
       </ul>
-      <p className="muted small">
-        Learning demo based on the rulebook, with the full 100-card Dungeon deck. All seats AI = watch the bots play.
-      </p>
+      <p className="muted small">{t('demoNote')}</p>
     </div>
+    {/* Outside the panel: its backdrop blur would trap the full-screen window inside it */}
+    {rules && <RulesDialog onClose={() => setRules(false)} />}
     </div>
   );
 }
@@ -77,21 +96,21 @@ function GameOver({ state, controllers, onRestart }: { state: GameState; control
   return (
     <div className="overlay">
       <div className="modal">
-        <h2>{winner ? `🏆 ${winner.player.name} is the Greatest Thief in the Realm!` : 'Nobody made it out…'}</h2>
+        <h2>{winner ? t('winner', { player: winner.player.name }) : t('nobodyOut')}</h2>
         <table>
-          <thead><tr><th>Player</th><th>Status</th>{scores[0].parts.map((p) => <th key={p.label}>{p.label}</th>)}<th>Total</th></tr></thead>
+          <thead><tr><th>{t('thPlayer')}</th><th>{t('thStatus')}</th>{scores[0].parts.map((p) => <th key={p.label}>{t(`score.${p.label}`)}</th>)}<th>{t('thTotal')}</th></tr></thead>
           <tbody>
             {scores.map((s) => (
               <tr key={s.player.id} className={`pc-${s.player.color}`}>
                 <td>{s.player.name} <small>{controllerLabel(controllers[state.players.indexOf(s.player)])}</small></td>
-                <td>{STATUS[s.player.status]}</td>
+                <td>{status(s.player.status)}</td>
                 {s.parts.map((p) => <td key={p.label}>{s.lost ? '–' : p.points}</td>)}
-                <td><b>{s.lost ? 'lost' : s.total}</b></td>
+                <td><b>{s.lost ? t('lost') : s.total}</b></td>
               </tr>
             ))}
           </tbody>
         </table>
-        <button className="primary" onClick={onRestart}>New game</button>
+        <button className="primary" onClick={onRestart}>{t('newGame')}</button>
       </div>
     </div>
   );
@@ -101,11 +120,12 @@ export default function App() {
   const [state, setState] = useState<GameState | null>(null);
   const [controllers, setControllers] = useState<Controller[]>([]);
   const [history, setHistory] = useState<GameState[]>([]); // this turn's earlier states, for Undo
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Msg | null>(null);
   const [shownTo, setShownTo] = useState<number | null>(null); // whose hand is visible
   const [swordPrompt, setSwordPrompt] = useState<MoveOption | null>(null);
   const [paused, setPaused] = useState(false);
   const [speed, setSpeed] = useState<Speed>('normal');
+  const [rules, setRules] = useState(false);
 
   useEffect(() => {
     if (!error) return;
@@ -143,7 +163,7 @@ export default function App() {
       setState(next);
       setError(null);
     } catch (e) {
-      if (e instanceof RuleError) setError(e.message);
+      if (e instanceof RuleError) setError(e.msg);
       else throw e;
     }
   };
@@ -153,7 +173,8 @@ export default function App() {
     setHistory(history.slice(0, -1));
   };
 
-  const recent = useMemo(() => (state ? state.log.slice(-16).reverse() : []), [state]);
+  const lang = useLang();
+  const recent = useMemo(() => (state ? state.log.slice(-16).reverse().map((m) => format(m, lang)) : []), [state, lang]);
 
   if (!state) {
     return (
@@ -189,25 +210,27 @@ export default function App() {
             <div key={p.id} className={`player-chip pc-${p.color}${i === state.current ? ' current' : ''}`}>
               <b>{p.name}</b>
               {controllers[i] !== 'human' && <span className="bot-badge">{controllerLabel(controllers[i])}</span>}
-              <span>{STATUS[p.status]}</span>
-              <span title="Health"><Heart /> {MAX_HEALTH - p.damage}</span>
-              <span title="Gold"><Gold n={p.gold} /></span>
-              <span title="Cubes in the Loảng xoảng! area">🔔 {state.clankArea[p.id]}</span>
+              <span>{status(p.status)}</span>
+              <span title={t('health')}><Heart /> {MAX_HEALTH - p.damage}</span>
+              <span title={t('gold')}><Gold n={p.gold} /></span>
+              <span title={t('clankCubes')}>🔔 {state.clankArea[p.id]}</span>
               {p.tokens.filter((t) => t.kind === 'artifact').map((t, j) => <span key={j} className="chip">{tokenName(t)}</span>)}
             </div>
           ))}
         </div>
         {hasBots && (
           <div className="bot-controls">
-            <button onClick={() => setPaused(!paused)} title="Pause or resume the AI players">{paused ? '▶ Resume' : '⏸ Pause'}</button>
-            <select value={speed} onChange={(e) => setSpeed(e.target.value as Speed)} title="AI speed">
-              <option value="slow">Slow</option>
-              <option value="normal">Normal</option>
-              <option value="fast">Fast</option>
+            <button onClick={() => setPaused(!paused)} title={t('pauseTitle')}>{paused ? t('resume') : t('pause')}</button>
+            <select value={speed} onChange={(e) => setSpeed(e.target.value as Speed)} title={t('speedTitle')}>
+              <option value="slow">{t('speedSlow')}</option>
+              <option value="normal">{t('speedNormal')}</option>
+              <option value="fast">{t('speedFast')}</option>
             </select>
           </div>
         )}
-        <button onClick={() => { if (confirm('Quit this game?')) setState(null); }}>Quit</button>
+        <button onClick={() => setRules(true)}>{t('rules')}</button>
+        <LangSwitch />
+        <button onClick={() => { if (confirm(t('quitConfirm'))) setState(null); }}>{t('quit')}</button>
       </header>
 
       <main>
@@ -222,15 +245,15 @@ export default function App() {
             <BotPanel state={state} level={controller as Level} paused={paused} />
           ) : handHidden ? (
             <section className={`panel handoff pc-${me.color}`}>
-              <h2>{me.name}'s turn</h2>
-              <p>Pass the screen to {me.name}.</p>
-              <button className="primary" onClick={() => setShownTo(state.current)}>Show my hand</button>
+              <h2>{t('turnOf', { player: me.name })}</h2>
+              <p>{t('passScreen', { player: me.name })}</p>
+              <button className="primary" onClick={() => setShownTo(state.current)}>{t('showHand')}</button>
             </section>
           ) : (
             <PlayerPanel state={state} dispatch={dispatch} canUndo={history.length > 0} onUndo={undo} />
           )}
           <section className="panel log">
-            <h3>What happened</h3>
+            <h3>{t('logTitle')}</h3>
             <ul>{recent.map((l, i) => <li key={i}>{l}</li>)}</ul>
           </section>
         </div>
@@ -238,26 +261,28 @@ export default function App() {
 
       {!handHidden && <DungeonPanel state={state} dispatch={dispatch} readOnly={botTurn} />}
 
-      {error && <div className="toast" onClick={() => setError(null)}>{error}</div>}
+      {error && <div className="toast" onClick={() => setError(null)}>{format(error, lang)}</div>}
 
       {swordPrompt && (
         <div className="overlay" onClick={() => setSwordPrompt(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Monster tunnel: {swordPrompt.monsters} damage</h3>
-            <p>Each Sword you use blocks 1 damage. You have {available(state).swords} Swords.</p>
+            <h3>{t('monsterTunnel', { n: swordPrompt.monsters })}</h3>
+            <p>{t('swordsBlock', { n: available(state).swords })}</p>
             <div className="buttons">
               {Array.from({ length: Math.min(swordPrompt.monsters, available(state).swords) - swordPrompt.minSwords + 1 }, (_, i) => i + swordPrompt.minSwords).map((n) => (
                 <button key={n} onClick={() => { dispatch({ type: 'move', to: swordPrompt.to, swords: n }); setSwordPrompt(null); }}>
-                  Use {n} Sword{n === 1 ? '' : 's'} → take {swordPrompt.monsters - n} damage
+                  {t('useSwords', { n, damage: swordPrompt.monsters - n })}
                 </button>
               ))}
             </div>
-            <p className="muted small">Going to: {ROOMS[swordPrompt.to].type} ({swordPrompt.to})</p>
+            <p className="muted small">{t('goingTo', { room: roomName(swordPrompt.to) })}</p>
           </div>
         </div>
       )}
 
       {state.pending && !handHidden && !botTurn && <PendingDialog state={state} dispatch={dispatch} />}
+
+      {rules && <RulesDialog onClose={() => setRules(false)} />}
 
       {state.over && <GameOver state={state} controllers={controllers} onRestart={() => setState(null)} />}
     </div>

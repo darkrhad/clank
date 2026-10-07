@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { produce } from 'immer';
+import { format } from '../i18n';
 import { cardDef } from './cards';
 import { applyMove, available, dragonAttack, moveOptions, RuleError } from './engine';
 import { cardPoints, finalScores } from './scoring';
@@ -22,6 +23,8 @@ const withHand = (s: GameState, ids: string[]) =>
 const play = (s: GameState, ...moves: Move[]) => moves.reduce(applyMove, s);
 const playAll = (s: GameState) => applyMove(s, { type: 'playAll' });
 const me = (s: GameState) => s.players[s.current];
+// The game log as English text
+const lines = (s: GameState) => s.log.map((m) => format(m, 'en'));
 
 const expectRule = (fn: () => unknown, message: RegExp) => {
   expect(fn).toThrow(RuleError);
@@ -172,7 +175,7 @@ describe('moving', () => {
 
   it('costs Boots; footprints cost two', () => {
     let s = playAll(withHand(at(game(), 'r2'), ['sidestep']));
-    expect(moveOptions(s).find((o) => o.to === 'r3')).toMatchObject({ allowed: false, reason: 'Needs 2 Boots' });
+    expect(moveOptions(s).find((o) => o.to === 'r3')).toMatchObject({ allowed: false, reason: { k: 'needsBoots', p: { n: 2 } } });
     s = play(s, { type: 'move', to: 'r1' });
     expect(me(s).room).toBe('r1');
     expect(available(s).boots).toBe(0);
@@ -285,7 +288,7 @@ describe('turns and the dragon', () => {
     });
     s = play(s, { type: 'playAll' }, { type: 'endTurn' });
     expect(s.dungeonRow.slice(0, 2)).toEqual(['orcGrunt#x1', 'kobold#x1']);
-    expect(s.log.filter((l) => l.includes('Dragon attack'))).toHaveLength(1);
+    expect(lines(s).filter((l) => l.includes('Dragon attack'))).toHaveLength(1);
     expect(s.clankArea).toEqual({ red: 0, yellow: 0 }); // all moved into the bag
   });
 
@@ -341,7 +344,7 @@ describe('knock-outs, countdown and scoring', () => {
     });
     for (let i = 0; i < 3; i++) s = play(s, { type: 'playAll' }, { type: 'endTurn' });
     expect(s.countdown!.space).toBe(4);
-    expect(s.log.filter((l) => l.includes('instant dragon attack'))).toHaveLength(3);
+    expect(lines(s).filter((l) => l.includes('instant dragon attack'))).toHaveLength(3);
     s = play(s, { type: 'playAll' }, { type: 'endTurn' });
     expect(s.players[1].status).toBe('dead');
     expect(s.over).toBe(true);
@@ -429,7 +432,7 @@ describe('Dungeon cards with new effects', () => {
     s = applyMove(s, { type: 'chooseOption', index: 0 });
     expect(s.dungeonRow[0]).toBe('orcGrunt#x1');
     expect(s.dungeonDiscard).toContain('ladder#r0');
-    expect(s.log.some((l) => l.includes('Dragon attack'))).toBe(false);
+    expect(lines(s).some((l) => l.includes('Dragon attack'))).toBe(false);
   });
 
   it('Shrine: on arrival 3 dragon cubes go back in the bag; use it to heal', () => {
@@ -469,7 +472,7 @@ describe('Dungeon cards with new effects', () => {
 
   it('Mister Whiskers: the dragon attacks, or -2 Loảng xoảng!', () => {
     const s = playAll(withHand(game(), ['misterWhiskers']));
-    expect(applyMove(s, { type: 'chooseOption', index: 0 }).log.some((l) => l.includes('Dragon attack'))).toBe(true);
+    expect(lines(applyMove(s, { type: 'chooseOption', index: 0 })).some((l) => l.includes('Dragon attack'))).toBe(true);
     expect(applyMove(s, { type: 'chooseOption', index: 1 }).clankArea.red).toBe(1);
   });
 
