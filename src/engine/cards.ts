@@ -81,8 +81,8 @@ const defs: CardDef[] = [
   // Starting deck
   { id: 'burgle', name: 'Burgle', banner: 'starter', skill: 1, source: 'rulebook' },
   { id: 'stumble', name: 'Stumble', banner: 'starter', clank: 1, text: '+1 Loảng xoảng!', source: 'rulebook' },
-  { id: 'sidestep', name: 'Sidestep', banner: 'starter', boots: 1, source: 'assumed' },
-  { id: 'scramble', name: 'Scramble', banner: 'starter', skill: 1, boots: 1, source: 'assumed' },
+  { id: 'sidestep', name: 'Sidestep', banner: 'starter', boots: 1, source: 'rulebook' },
+  { id: 'scramble', name: 'Scramble', banner: 'starter', skill: 1, boots: 1, source: 'rulebook' },
 
   // Reserve
   { id: 'mercenary', name: 'Mercenary', banner: 'reserve', companion: true, skill: 1, swords: 2, cost: 2, source: 'rulebook' },

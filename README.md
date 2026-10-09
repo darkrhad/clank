@@ -49,5 +49,4 @@ Every push to `main` redeploys. With the Vercel CLI, `.vercelignore` keeps `asse
 ## Differences from the real game
 
 - **Secret token mix:** the totals are from the rulebook (11 major, 18 minor), the mix is assumed.
-- **Starting deck:** Sidestep and Scramble values are assumed.
 - Only the front side of the board.

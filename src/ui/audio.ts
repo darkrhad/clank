@@ -1,7 +1,9 @@
 // Music and sound effects, made in the browser with the Web Audio API: no
-// recordings, so nothing to license. The music is a slow plucked-zither tune
-// in a Vietnamese pentatonic scale, with notes that glide up like the đàn bầu,
-// over a low drone and a soft gong. Effects are short synthesized sounds.
+// recordings for the effects. Music: src/ui/music/menu.ogg on the start menu
+// and src/ui/music/game.ogg in a game (an .mp3 with the same name is used
+// where the browser can't play .ogg, e.g. older Safari). Without a file, a
+// synthesized dark dungeon ambience plays instead (drone, chord swells, cave
+// wind, drips, distant drums, gong, a rare đàn bầu note).
 // Browsers only allow sound after a click: unlock() is called on the first one.
 
 type Sfx = 'card' | 'coin' | 'clank' | 'sword' | 'step' | 'hit' | 'dragon' | 'chime' | 'artifact' | 'turn' | 'escape' | 'down' | 'nope';
@@ -105,52 +107,167 @@ function gong(t: number, base = 98, peak = 0.35, dest: AudioNode = sfxBus) {
 
 // ---------- music ----------
 
-// D minor pentatonic (D F G A C) over two octaves: a dark, old sound
+export type MusicScene = 'menu' | 'game';
+let scene: MusicScene = 'menu';
+
+const TRACKS = import.meta.glob('./music/*.{ogg,mp3}', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const canOgg = typeof Audio !== 'undefined' && new Audio().canPlayType('audio/ogg; codecs=vorbis') !== '';
+
+function trackUrl(s: MusicScene): string | undefined {
+  const ogg = TRACKS[`./music/${s}.ogg`], mp3 = TRACKS[`./music/${s}.mp3`];
+  return canOgg ? ogg ?? mp3 : mp3;
+}
+
+// Start menu or game: switches the music track (crossfade) when it changes
+export function setMusicScene(s: MusicScene) {
+  if (s === scene) return;
+  scene = s;
+  if (settings.music && ctx) { stopMusic(); startMusic(); }
+}
+
+let track: { el: HTMLAudioElement; g: GainNode } | null = null;
+
+function startTrack(url: string) {
+  const c = ctx!;
+  const el = new Audio(url);
+  el.loop = true;
+  el.crossOrigin = 'anonymous';
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, c.currentTime);
+  g.gain.exponentialRampToValueAtTime(1, c.currentTime + 2);
+  c.createMediaElementSource(el).connect(g).connect(musicBus);
+  void el.play().catch(() => { /* not allowed yet: unlock() starts it again */ });
+  track = { el, g };
+}
+
+function stopTrack() {
+  if (!track || !ctx) return;
+  const { el, g } = track;
+  const t = ctx.currentTime;
+  g.gain.cancelScheduledValues(t);
+  g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 1.5);
+  setTimeout(() => el.pause(), 1600);
+  track = null;
+}
+
+// Dramatic dungeon ambience: a dark pad that swells through a slow minor chord
+// cycle, a low drone, cave wind, water drips, distant drums and a deep gong,
+// with now and then a lone đàn bầu note. Continuous layers are kept in `held`
+// so stopMusic() can fade them out.
+
+// D minor pentatonic (D F G A C) for the rare zither notes
 const SCALE = [146.83, 174.61, 196.0, 220.0, 261.63, 293.66, 349.23, 392.0, 440.0, 523.25];
-const BEAT = 60 / 66; // a slow pulse
+// Dm, Bb, Gm, A: each chord lasts 8 beats
+const CHORDS = [[73.42, 110.0, 174.61], [58.27, 87.31, 146.83], [49.0, 98.0, 116.54], [55.0, 82.41, 138.59]];
+const BEAT = 60 / 60;
 let musicTimer: number | null = null;
-let nextBeat = 0, beat = 0, pos = 4, drone: { o: OscillatorNode; g: GainNode } | null = null;
+let nextBeat = 0, beat = 0, pos = 4;
+let held: { stop: (t: number) => void }[] = [];
+
+// A sustained layer that fades in, and fades out on stop
+function hold(node: AudioScheduledSourceNode, g: GainNode, level: number, fadeIn: number) {
+  const c = ctx!;
+  g.gain.setValueAtTime(0.0001, c.currentTime);
+  g.gain.exponentialRampToValueAtTime(level, c.currentTime + fadeIn);
+  node.start();
+  held.push({
+    stop: (t) => {
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 2);
+      node.stop(t + 2.1);
+    },
+  });
+}
 
 function startMusic() {
-  if (!ctx || musicTimer !== null || ctx.state !== 'running' && ctx.state !== 'suspended') return;
-  nextBeat = ctx.currentTime + 0.3;
-  // A low drone on D that slowly breathes
-  const o = ctx.createOscillator(); const g = ctx.createGain();
-  o.type = 'sine'; o.frequency.value = 73.42;
-  g.gain.setValueAtTime(0.0001, ctx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.06, ctx.currentTime + 4);
-  const lfo = ctx.createOscillator(); const lfoGain = ctx.createGain();
-  lfo.frequency.value = 0.07; lfoGain.gain.value = 0.025; lfo.connect(lfoGain).connect(g.gain); lfo.start();
-  o.connect(g).connect(musicBus); o.start();
-  drone = { o, g };
+  if (!ctx || musicTimer !== null || track || ctx.state !== 'running' && ctx.state !== 'suspended') return;
+  const url = trackUrl(scene);
+  if (url) { startTrack(url); return; }
+  const c = ctx;
+  nextBeat = c.currentTime + 0.3;
+  beat = 0;
+
+  // Low drone on D with a fifth, through a slowly breathing low-pass filter
+  const droneFilter = c.createBiquadFilter(); droneFilter.type = 'lowpass'; droneFilter.frequency.value = 260; droneFilter.Q.value = 3;
+  const lfo = c.createOscillator(); const lfoGain = c.createGain();
+  lfo.frequency.value = 0.05; lfoGain.gain.value = 140; lfo.connect(lfoGain).connect(droneFilter.frequency);
+  hold(lfo, c.createGain(), 1, 0.1);
+  const droneOut = c.createGain(); droneFilter.connect(droneOut).connect(musicBus);
+  for (const [f, type, detune] of [[36.71, 'sawtooth', 0], [36.71, 'sawtooth', 9], [55.0, 'sawtooth', -6], [73.42, 'sine', 0]] as const) {
+    const o = c.createOscillator(); o.type = type; o.frequency.value = f; o.detune.value = detune;
+    const g = c.createGain(); o.connect(g).connect(droneFilter);
+    hold(o, g, type === 'sine' ? 0.08 : 0.05, 6);
+  }
+
+  // Cave wind: looping noise through a band-pass whose pitch drifts
+  const len = c.sampleRate * 4;
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const wind = c.createBufferSource(); wind.buffer = buf; wind.loop = true;
+  const windFilter = c.createBiquadFilter(); windFilter.type = 'bandpass'; windFilter.frequency.value = 420; windFilter.Q.value = 6;
+  const windLfo = c.createOscillator(); const windLfoGain = c.createGain();
+  windLfo.frequency.value = 0.03; windLfoGain.gain.value = 260; windLfo.connect(windLfoGain).connect(windFilter.frequency);
+  hold(windLfo, c.createGain(), 1, 0.1);
+  const windGain = c.createGain(); wind.connect(windFilter).connect(windGain).connect(musicBus);
+  hold(wind, windGain, 0.05, 8);
+
   musicTimer = window.setInterval(scheduleMusic, 120);
 }
 
 function stopMusic() {
+  stopTrack();
   if (musicTimer !== null) { clearInterval(musicTimer); musicTimer = null; }
-  if (drone && ctx) {
-    drone.g.gain.cancelScheduledValues(ctx.currentTime);
-    drone.g.gain.setValueAtTime(drone.g.gain.value, ctx.currentTime);
-    drone.g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.5);
-    drone.o.stop(ctx.currentTime + 1.6);
-    drone = null;
+  if (ctx) { const t = ctx.currentTime; held.forEach((h) => h.stop(t)); }
+  held = [];
+}
+
+// A pad chord that swells in and out over `dur` seconds
+function padChord(freqs: number[], t: number, dur: number) {
+  const c = ctx!;
+  const f = c.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 1;
+  f.frequency.setValueAtTime(300, t); f.frequency.linearRampToValueAtTime(900, t + dur * 0.5); f.frequency.linearRampToValueAtTime(300, t + dur);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + dur * 0.45); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  f.connect(g).connect(musicBus);
+  for (const fr of freqs) {
+    for (const det of [-7, 7]) {
+      const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fr * 2; o.detune.value = det;
+      o.connect(f); o.start(t); o.stop(t + dur + 0.1);
+    }
   }
 }
 
-// Plans the notes a little ahead: a wandering melody in short phrases with
-// rests, some notes gliding up, a soft gong every 16 beats
+// A distant drum: a low thump with a little skin noise
+function drum(t: number, peak: number) {
+  tone(58, t, { peak, attack: 0.005, decay: 0.9, glide: 0.6, dest: musicBus });
+  noise(t, 0.12, { type: 'lowpass', freq: 500, peak: peak * 0.4, dest: musicBus });
+}
+
+// A water drip: a short high blip that drops in pitch
+function drip(t: number) {
+  const f = 900 + Math.random() * 900;
+  tone(f, t, { peak: 0.035, attack: 0.002, decay: 0.12, glide: 0.55, dest: musicBus });
+}
+
+// Plans a little ahead: a chord every 8 beats, slow drums building to the
+// chord change, drips at random, a gong every 32 beats, a rare zither note
 function scheduleMusic() {
   if (!ctx) return;
   while (nextBeat < ctx.currentTime + 0.6) {
-    const inPhrase = beat % 8 < 5;
-    if (inPhrase && Math.random() < 0.72) {
-      pos = Math.max(0, Math.min(SCALE.length - 1, pos + [-2, -1, -1, 0, 1, 1, 2][Math.floor(Math.random() * 7)]));
-      const glide = Math.random() < 0.28 ? 1.06 : 1; // đàn bầu bend up a semitone
-      pluck(SCALE[pos], nextBeat, 0.16 + Math.random() * 0.06, glide);
-      if (Math.random() < 0.18) pluck(SCALE[pos], nextBeat + BEAT / 2, 0.1); // a soft echo
+    const bar = beat % 8;
+    if (bar === 0) padChord(CHORDS[Math.floor(beat / 8) % CHORDS.length], nextBeat, BEAT * 9);
+    if (bar === 0) drum(nextBeat, 0.22);
+    if (bar === 4 && Math.random() < 0.6) drum(nextBeat, 0.12);
+    if (bar === 7 && Math.random() < 0.5) { drum(nextBeat, 0.1); drum(nextBeat + BEAT / 2, 0.14); }
+    if (Math.random() < 0.22) drip(nextBeat + Math.random() * BEAT);
+    if (beat % 32 === 16) gong(nextBeat, 49, 0.16, musicBus);
+    if (Math.random() < 0.07) {
+      pos = Math.max(0, Math.min(SCALE.length - 1, pos + [-2, -1, 1, 2][Math.floor(Math.random() * 4)]));
+      pluck(SCALE[pos], nextBeat, 0.1, Math.random() < 0.4 ? 1.06 : 1);
     }
-    if (beat % 8 === 0) pluck(SCALE[0] / 2, nextBeat, 0.12); // a low root note at the start of a phrase
-    if (beat % 16 === 0 && beat > 0) gong(nextBeat, 73.42, 0.12, musicBus);
     nextBeat += BEAT;
     beat++;
   }
