@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { getAudio, LOG_SOUND, play, setMusic, setSfx, subscribeAudio, unlock } from './audio';
+import { getAudio, LOG_SOUND, play, setMusic, setMusicScene, setSfx, subscribeAudio, unlock } from './audio';
 import { chooseMove, LEVELS, type Level } from '../ai/bot';
 import { applyMove, available, currentPlayer, RuleError, skipMove, type MoveOption } from '../engine/engine';
 import { finalScores } from '../engine/scoring';
@@ -166,6 +166,10 @@ export default function App() {
     const t = setTimeout(() => setError(null), 4000);
     return () => clearTimeout(t);
   }, [error]);
+
+  // Menu music on the start menu, game music in a game
+  const playing = !!state;
+  useEffect(() => { setMusicScene(playing ? 'game' : 'menu'); }, [playing]);
 
   // Browsers only allow sound after a click: start the audio on the first one
   useEffect(() => {
